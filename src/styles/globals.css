@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+}
+
+body {
+  /* En lugar de usar @apply (que a veces da guerra en v4), 
+     puedes usar las clases de toda la vida o el nuevo formato */
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-900);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+}
