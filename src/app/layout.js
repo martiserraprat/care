@@ -1,20 +1,23 @@
 // src/app/layout.js
-import Navbar from '@/components/Navbar';
-import Sidebar from '@/components/Sidebar';
 import '@/styles/globals.css';
+
+export const metadata = {
+  title: 'Care-E — Autonomia, seguretat i companyia',
+  description: 'Robot domèstic intel·ligent per a la tercera edat.',
+};
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
-      <body className="flex flex-col h-screen"> {/* Flexbox para la estructura global */}
-        <Navbar />
-        <div className="flex flex-1 overflow-hidden"> {/* Sidebar y contenido */}
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50"> {/* Contenido dinámico */}
-            {children}
-          </main>
-        </div>
-      </body>
+    <html lang="ca" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
