@@ -1,18 +1,18 @@
+// src/app/dashboard/layout.js
 "use client";
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext } from "react";
 import Sidebar from "@/components/Sidebar";
-import Navbar from "@/components/Navbar";
 
-export const ThemeContext = createContext({ theme: "dark", setTheme: () => {} });
-export const SidebarContext = createContext({ open: false, setOpen: () => {} });
+export const ThemeContext   = createContext({ theme: "light", setTheme: () => {} });
+export const SidebarContext = createContext({ open: false,    setOpen:  () => {} });
 
 export default function DashboardLayout({ children }) {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme]             = useState("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("care-theme") || "dark";
+    const saved = localStorage.getItem("care-theme") || "light";
     setTheme(saved);
   }, []);
 
@@ -25,32 +25,23 @@ export default function DashboardLayout({ children }) {
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <SidebarContext.Provider value={{ open: sidebarOpen, setOpen: setSidebarOpen }}>
-        <div
-          className={`flex h-screen overflow-hidden transition-colors duration-300 ${
-            dark ? "bg-[#0f0d0c]" : "bg-[#f5f3f0]"
-          }`}
-          style={{ fontFamily: "'Space Mono', monospace" }}
-        >
-          <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');`}</style>
-
-          {/* Sidebar */}
+        <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${
+          dark ? "bg-slate-950" : "bg-slate-50"
+        }`}>
           <Sidebar />
 
           {/* Mobile overlay */}
           {sidebarOpen && (
             <div
-              className="fixed inset-0 bg-black/60 z-30 md:hidden"
+              className="fixed inset-0 bg-black/40 z-30 md:hidden backdrop-blur-sm"
               onClick={() => setSidebarOpen(false)}
             />
           )}
 
-          {/* Main */}
-          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-            <Navbar />
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-              {children}
-            </main>
-          </div>
+          {/* Main content — no navbar */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-w-0">
+            {children}
+          </main>
         </div>
       </SidebarContext.Provider>
     </ThemeContext.Provider>
