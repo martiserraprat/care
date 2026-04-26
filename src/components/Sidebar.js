@@ -101,16 +101,6 @@ export default function Sidebar() {
             >✕</button>
           </div>
         </div>
-
-        {/* Online status */}
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl mb-2 ${dark ? "bg-slate-900" : "bg-slate-50"}`}>
-          <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"
-            style={{ boxShadow: "0 0 5px #22c55e" }} />
-          <span className={`text-xs font-medium ${dark ? "text-slate-400" : "text-slate-500"}`}>
-            Robot connectat
-          </span>
-        </div>
-
         {/* Nav */}
         <nav className="space-y-0.5 mt-1">
           {navItems.map(({ href, icon, label }) => {

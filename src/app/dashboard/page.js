@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase";
 
 const supabase = createClient();
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 const BTN_PRIMARY = {
   background: "linear-gradient(135deg, #0ea5e9, #0284c7)",
   boxShadow: "0 4px 16px rgba(14,165,233,0.3)",
@@ -16,15 +15,11 @@ const BTN_PRIMARY = {
   transition: "transform 0.15s ease, box-shadow 0.15s ease",
 };
 
-// ─── Reusable components ──────────────────────────────────────────────────────
 function PrimaryBtn({ children, onClick, disabled, className = "" }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
+    <button onClick={onClick} disabled={disabled}
       className={`rounded-2xl text-sm transition-all duration-200 hover:-translate-y-px active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${className}`}
-      style={BTN_PRIMARY}
-    >
+      style={BTN_PRIMARY}>
       {children}
     </button>
   );
@@ -56,39 +51,19 @@ function Badge({ children, color = "sky", dark }) {
 }
 
 function Skeleton({ className = "", dark }) {
-  return (
-    <div className={`animate-pulse rounded-xl ${
-      dark ? "bg-slate-800" : "bg-slate-100"
-    } ${className}`} />
-  );
+  return <div className={`animate-pulse rounded-xl ${dark ? "bg-slate-800" : "bg-slate-100"} ${className}`} />;
 }
 
-// ─── Stats Row ────────────────────────────────────────────────────────────────
 function StatsRow({ meds, alerts, dark }) {
-  const total    = meds.length;
-  const taken    = meds.filter(m => m.status === "taken" || m.status === "dispensed").length;
-  const pending  = total - taken;
+  const total        = meds.length;
+  const taken        = meds.filter(m => m.log_status === "taken" || m.log_status === "dispensed").length;
+  const pending      = total - taken;
   const activeAlerts = alerts.filter(a => !a.resolved).length;
 
   const stats = [
-    {
-      value:  total > 0 ? `${taken} / ${total}` : "—",
-      label:  "Pastilles avui",
-      badge:  pending > 0 ? `${pending} pendents` : "Tot pres ✓",
-      bColor: pending > 0 ? "sky" : "green",
-    },
-    {
-      value:  activeAlerts === 0 ? "Cap" : `${activeAlerts}`,
-      label:  "Alertes actives",
-      badge:  activeAlerts === 0 ? "Tot bé 🎉" : "Revisar avui",
-      bColor: activeAlerts === 0 ? "green" : "amber",
-    },
-    {
-      value:  total > 0 ? `${Math.round((taken / total) * 100)}%` : "—",
-      label:  "Adherència avui",
-      badge:  taken === total && total > 0 ? "Excel·lent" : "En curs",
-      bColor: taken === total && total > 0 ? "green" : "sky",
-    },
+    { value: total > 0 ? `${taken} / ${total}` : "—", label: "Pastilles avui",   badge: pending > 0 ? `${pending} pendents` : "Tot pres ✓",       bColor: pending > 0 ? "sky" : "green" },
+    { value: activeAlerts === 0 ? "Cap" : `${activeAlerts}`, label: "Alertes actives", badge: activeAlerts === 0 ? "Tot bé 🎉" : "Revisar avui", bColor: activeAlerts === 0 ? "green" : "amber" },
+    { value: total > 0 ? `${Math.round((taken / total) * 100)}%` : "—", label: "Adherència avui", badge: taken === total && total > 0 ? "Excel·lent" : "En curs", bColor: taken === total && total > 0 ? "green" : "sky" },
   ];
 
   return (
@@ -96,12 +71,10 @@ function StatsRow({ meds, alerts, dark }) {
       {stats.map(({ value, label, badge, bColor }) => (
         <Card key={label} dark={dark} className="p-4 sm:p-5">
           <div className={`text-2xl sm:text-3xl font-bold mb-1.5 ${
-            bColor === "sky"   ? (dark ? "text-sky-400"   : "text-sky-600")   :
+            bColor === "sky" ? (dark ? "text-sky-400" : "text-sky-600") :
             bColor === "green" ? (dark ? "text-green-400" : "text-green-600") :
-                                 (dark ? "text-amber-400" : "text-amber-600")
-          }`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-            {value}
-          </div>
+            (dark ? "text-amber-400" : "text-amber-600")
+          }`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{value}</div>
           <p className={`text-sm mb-2.5 ${dark ? "text-slate-300" : "text-slate-700"}`}>{label}</p>
           <Badge color={bColor} dark={dark}>{badge}</Badge>
         </Card>
@@ -110,107 +83,62 @@ function StatsRow({ meds, alerts, dark }) {
   );
 }
 
-// ─── Status Card ──────────────────────────────────────────────────────────────
 function StatusCard({ robot, patient, dark }) {
+  const signalColor = { excellent: "sky", good: "green", poor: "amber" }[robot?.signal] ?? "slate";
+  const signalLabel = { excellent: "Senyal excel·lent", good: "Senyal bo", poor: "Senyal feble" }[robot?.signal] ?? "—";
   const lastSeen = robot?.updated_at
     ? new Date(robot.updated_at).toLocaleTimeString("ca-ES", { hour: "2-digit", minute: "2-digit" })
     : null;
 
-  const signalColor = {
-    excellent: "sky",
-    good:      "green",
-    poor:      "amber",
-  }[robot?.signal] ?? "slate";
-
-  const signalLabel = {
-    excellent: "Senyal excel·lent",
-    good:      "Senyal bo",
-    poor:      "Senyal feble",
-  }[robot?.signal] ?? "—";
-
   return (
     <Card dark={dark} className="p-6 lg:col-span-2 relative overflow-hidden">
       <div className="absolute -bottom-8 -right-8 text-[110px] opacity-[0.04] pointer-events-none select-none">🤖</div>
-
       <div className="flex items-center gap-2 mb-5">
-        <span
-          className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500" : "bg-slate-400"}`}
-          style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}}
-        />
-        <span className={`text-sm font-medium ${
-          robot?.status === "online"
-            ? dark ? "text-green-400" : "text-green-600"
-            : dark ? "text-slate-400" : "text-slate-500"
-        }`}>
+        <span className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500" : "bg-slate-400"}`}
+          style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}} />
+        <span className={`text-sm font-medium ${robot?.status === "online" ? (dark ? "text-green-400" : "text-green-600") : (dark ? "text-slate-400" : "text-slate-500")}`}>
           {robot?.status === "online" ? "Care-E connectat" : "Care-E desconnectat"}
         </span>
       </div>
-
       <h2 className={`text-2xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`}
         style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
         {patient?.full_name ?? "Usuari"}
       </h2>
       {lastSeen && (
         <p className={`text-base mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          Última actualització a les{" "}
-          <span className={`font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{lastSeen}h</span>
+          Última actualització a les <span className={`font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{lastSeen}h</span>
         </p>
       )}
-
       <div className="flex flex-wrap gap-2">
-        {robot?.battery != null && (
-          <Badge color={robot.battery > 20 ? "green" : "amber"} dark={dark}>
-            🔋 {robot.battery}% Bateria
-          </Badge>
-        )}
-        {robot?.signal && (
-          <Badge color={signalColor} dark={dark}>📶 {signalLabel}</Badge>
-        )}
-        {robot?.status === "online" && (
-          <Badge color="slate" dark={dark}>🕒 En línia</Badge>
-        )}
+        {robot?.battery != null && <Badge color={robot.battery > 20 ? "green" : "amber"} dark={dark}>🔋 {robot.battery}% Bateria</Badge>}
+        {robot?.signal && <Badge color={signalColor} dark={dark}>📶 {signalLabel}</Badge>}
+        {robot?.status === "online" && <Badge color="slate" dark={dark}>🕒 En línia</Badge>}
       </div>
     </Card>
   );
 }
 
-// ─── Dispense Card ────────────────────────────────────────────────────────────
 function DispenseCard({ robot, dark }) {
   const [st, setSt] = useState("idle");
-
   const handle = async () => {
     setSt("loading");
-    // Aquí enviaries la ordre al robot via API / webhook
-    // De moment simulem la resposta
     if (robot?.id) {
       await supabase.from("activity_logs").insert({
-        robot_id:    robot.id,
-        type:        "medication",
-        description: "Dispensació manual des del dashboard",
+        robot_id: robot.id, type: "medication", description: "Dispensació manual des del dashboard",
       });
     }
     setTimeout(() => setSt("done"), 1800);
     setTimeout(() => setSt("idle"), 4000);
   };
-
   return (
     <Card dark={dark} className="p-6 flex flex-col items-center text-center justify-between gap-5">
       <div>
-        <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${
-          dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"
-        }`}>💊</div>
-        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`}
-          style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-          Control Manual
-        </h3>
-        <p className={`text-sm leading-relaxed max-w-[180px] mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          Dispensa la medicació manualment per a proves o emergències.
-        </p>
+        <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"}`}>💊</div>
+        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Control Manual</h3>
+        <p className={`text-sm leading-relaxed max-w-[180px] mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
       </div>
       {st === "done" ? (
-        <div className={`w-full py-3 rounded-2xl text-sm font-semibold border text-center ${
-          dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"
-        }`}>✓ Dispensat correctament</div>
+        <div className={`w-full py-3 rounded-2xl text-sm font-semibold border text-center ${dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"}`}>✓ Dispensat correctament</div>
       ) : (
         <PrimaryBtn onClick={handle} disabled={st === "loading"} className="w-full py-3 px-6">
           {st === "loading" ? "Enviant ordre..." : "💊 Dispensar Ara"}
@@ -220,28 +148,18 @@ function DispenseCard({ robot, dark }) {
   );
 }
 
-// ─── Medication Table ─────────────────────────────────────────────────────────
 function MedicationTable({ meds, loading, dark }) {
   const today = new Date().toLocaleDateString("ca-ES", { weekday: "long", day: "numeric", month: "long" });
-
   return (
     <Card dark={dark} className="overflow-hidden">
       <div className={`flex items-center justify-between px-6 py-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`}
-          style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-          Medicació d'avui
-        </h3>
+        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Medicació d'avui</h3>
         <span className={`text-sm capitalize ${dark ? "text-slate-500" : "text-slate-400"}`}>{today}</span>
       </div>
-
       {loading ? (
-        <div className="p-6 space-y-3">
-          {[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}
-        </div>
+        <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}</div>
       ) : meds.length === 0 ? (
-        <div className={`p-10 text-center text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>
-          No hi ha medicació programada per avui
-        </div>
+        <div className={`p-10 text-center text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>No hi ha medicació programada per avui</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -255,25 +173,12 @@ function MedicationTable({ meds, loading, dark }) {
             </thead>
             <tbody>
               {meds.map((m) => (
-                <tr key={m.id} className={`border-b last:border-0 transition-colors ${
-                  dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-50 hover:bg-slate-50"
-                }`}>
-                  <td className="px-6 py-4">
-                    <span className={`text-sm font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>
-                      {m.scheduled_time?.slice(0, 5)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`text-sm ${dark ? "text-slate-200" : "text-slate-800"}`}>{m.name}</span>
-                  </td>
-                  <td className="px-4 py-4 hidden sm:table-cell">
-                    <span className={`text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>{m.dose}</span>
-                  </td>
+                <tr key={m.id} className={`border-b last:border-0 transition-colors ${dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-50 hover:bg-slate-50"}`}>
+                  <td className="px-6 py-4"><span className={`text-sm font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{m.scheduled_time?.slice(0, 5)}</span></td>
+                  <td className="px-4 py-4"><span className={`text-sm ${dark ? "text-slate-200" : "text-slate-800"}`}>{m.name}</span></td>
+                  <td className="px-4 py-4 hidden sm:table-cell"><span className={`text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>{m.dose}</span></td>
                   <td className="px-6 py-4 text-right">
-                    <Badge
-                      color={m.log_status === "taken" || m.log_status === "dispensed" ? "green" : "amber"}
-                      dark={dark}
-                    >
+                    <Badge color={m.log_status === "taken" || m.log_status === "dispensed" ? "green" : "amber"} dark={dark}>
                       {m.log_status === "taken" || m.log_status === "dispensed" ? "✓ Pres" : "Pendent"}
                     </Badge>
                   </td>
@@ -287,9 +192,8 @@ function MedicationTable({ meds, loading, dark }) {
   );
 }
 
-// ─── Add Medication Form ──────────────────────────────────────────────────────
 function AddMedForm({ patientId, onAdded, dark }) {
-  const [form, setForm]   = useState({ name: "", time: "", dose: "" });
+  const [form, setForm] = useState({ name: "", time: "", dose: "" });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
 
@@ -302,81 +206,49 @@ function AddMedForm({ patientId, onAdded, dark }) {
   const handle = async () => {
     if (!form.name || !form.time || !form.dose) return;
     setError(null);
-
     const { data: { user } } = await supabase.auth.getUser();
-
     const { error } = await supabase.from("medications").insert({
-      name:           form.name,
-      dose:           form.dose,
-      scheduled_time: form.time,
-      days:           ["dilluns","dimarts","dimecres","dijous","divendres","dissabte","diumenge"],
-      active:         true,
-      patient_id:     patientId,
-      created_by:     user.id,
+      name: form.name, dose: form.dose, scheduled_time: form.time,
+      days: ["dilluns","dimarts","dimecres","dijous","divendres","dissabte","diumenge"],
+      active: true, patient_id: patientId, created_by: user.id,
     });
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
+    if (error) { setError(error.message); return; }
     setSaved(true);
     setForm({ name: "", time: "", dose: "" });
-    onAdded?.(); // refresca la taula
+    onAdded?.();
     setTimeout(() => setSaved(false), 2500);
   };
 
   return (
     <Card dark={dark} className="p-6">
-      <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"}`}
-        style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-        Afegir medicació
-      </h3>
-      <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>
-        Programa una nova pastilla per a l'usuari.
-      </p>
+      <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Afegir medicació</h3>
+      <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>Programa una nova pastilla per a l'usuari.</p>
       <div className="space-y-4">
         <div>
-          <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>
-            Nom del medicament
-          </label>
-          <input type="text" placeholder="Ex: Paracetamol" value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })} className={inputCls} />
+          <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Nom del medicament</label>
+          <input type="text" placeholder="Ex: Paracetamol" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputCls} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Hora</label>
-            <input type="time" value={form.time}
-              onChange={e => setForm({ ...form, time: e.target.value })} className={inputCls} />
+            <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} className={inputCls} />
           </div>
           <div>
             <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Quantitat</label>
-            <input type="text" placeholder="1 pastilla" value={form.dose}
-              onChange={e => setForm({ ...form, dose: e.target.value })} className={inputCls} />
+            <input type="text" placeholder="1 pastilla" value={form.dose} onChange={e => setForm({ ...form, dose: e.target.value })} className={inputCls} />
           </div>
         </div>
-
-        {error && (
-          <p className={`text-xs px-3 py-2 rounded-xl ${dark ? "bg-red-950/60 text-red-400" : "bg-red-50 text-red-600"}`}>
-            {error}
-          </p>
-        )}
-
+        {error && <p className={`text-xs px-3 py-2 rounded-xl ${dark ? "bg-red-950/60 text-red-400" : "bg-red-50 text-red-600"}`}>{error}</p>}
         {saved ? (
-          <div className={`w-full py-3 rounded-2xl text-sm font-semibold text-center border ${
-            dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"
-          }`}>✓ Medicació afegida!</div>
+          <div className={`w-full py-3 rounded-2xl text-sm font-semibold text-center border ${dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"}`}>✓ Medicació afegida!</div>
         ) : (
-          <PrimaryBtn onClick={handle} className="w-full py-3 px-6">
-            Afegir a la llista
-          </PrimaryBtn>
+          <PrimaryBtn onClick={handle} className="w-full py-3 px-6">Afegir a la llista</PrimaryBtn>
         )}
       </div>
     </Card>
   );
 }
 
-// ─── Activity Timeline ────────────────────────────────────────────────────────
 function ActivityTimeline({ logs, loading, dark }) {
   const dot   = { medication: "bg-green-500", interaction: "bg-sky-400", alert: "bg-amber-400", fall: "bg-red-500" };
   const color = { medication: "green", interaction: "sky", alert: "amber", fall: "red" };
@@ -385,41 +257,28 @@ function ActivityTimeline({ logs, loading, dark }) {
   return (
     <Card dark={dark} className="overflow-hidden">
       <div className={`flex items-center gap-2 px-6 py-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`}
-          style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-          Activitat recent
-        </h3>
+        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Activitat recent</h3>
       </div>
       <div className="p-4 space-y-2">
         {loading ? (
           [1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-16 w-full" />)
         ) : logs.length === 0 ? (
-          <p className={`text-sm text-center py-6 ${dark ? "text-slate-500" : "text-slate-400"}`}>
-            Cap activitat recent
-          </p>
+          <p className={`text-sm text-center py-6 ${dark ? "text-slate-500" : "text-slate-400"}`}>Cap activitat recent</p>
         ) : (
           logs.map((a, i) => (
-            <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-colors ${
-              dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-100 hover:bg-slate-50"
-            }`}>
+            <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-colors ${dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-100 hover:bg-slate-50"}`}>
               <div className="flex flex-col items-center gap-1 pt-1 flex-shrink-0">
                 <div className={`w-2.5 h-2.5 rounded-full ${dot[a.type] ?? "bg-slate-400"}`} />
-                {i < logs.length - 1 && (
-                  <div className={`w-px flex-1 min-h-6 rounded-full ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
-                )}
+                {i < logs.length - 1 && <div className={`w-px flex-1 min-h-6 rounded-full ${dark ? "bg-slate-800" : "bg-slate-100"}`} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <Badge color={color[a.type] ?? "slate"} dark={dark}>
-                    {label[a.type] ?? a.type}
-                  </Badge>
+                  <Badge color={color[a.type] ?? "slate"} dark={dark}>{label[a.type] ?? a.type}</Badge>
                   <span className={`text-xs flex-shrink-0 ${dark ? "text-slate-600" : "text-slate-400"}`}>
                     {new Date(a.created_at).toLocaleTimeString("ca-ES", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
-                <p className={`text-sm leading-relaxed ${dark ? "text-slate-400" : "text-slate-600"}`}>
-                  {a.description}
-                </p>
+                <p className={`text-sm leading-relaxed ${dark ? "text-slate-400" : "text-slate-600"}`}>{a.description}</p>
               </div>
             </div>
           ))
@@ -429,46 +288,51 @@ function ActivityTimeline({ logs, loading, dark }) {
   );
 }
 
-// ─── Next Med Panel ───────────────────────────────────────────────────────────
 function NextMedPanel({ meds, dark }) {
-  const now  = new Date();
   const next = meds
     .filter(m => m.log_status !== "taken" && m.log_status !== "dispensed")
     .sort((a, b) => a.scheduled_time.localeCompare(b.scheduled_time))[0];
 
-  if (!next) return (
-    <Card dark={dark} className="p-6 h-fit">
-      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"}`}
-        style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-        Propera medicació
-      </h3>
-      <p className={`text-sm text-center py-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>
-        Tota la medicació d'avui ja s'ha pres ✓
-      </p>
-    </Card>
-  );
-
   return (
     <Card dark={dark} className="p-6 h-fit">
-      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"}`}
-        style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-        Propera medicació
-      </h3>
-      <div className={`p-5 rounded-2xl border mb-4 ${
-        dark ? "border-sky-800/40 bg-sky-950/40" : "border-sky-100 bg-sky-50"
+      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Propera medicació</h3>
+      {!next ? (
+        <p className={`text-sm text-center py-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>Tota la medicació d'avui ja s'ha pres ✓</p>
+      ) : (
+        <div className={`p-5 rounded-2xl border ${dark ? "border-sky-800/40 bg-sky-950/40" : "border-sky-100 bg-sky-50"}`}>
+          <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{next.scheduled_time?.slice(0, 5)}</div>
+          <div className={`text-base font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>{next.name}</div>
+          <div className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-500"}`}>{next.dose}</div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── No robot dialog ──────────────────────────────────────────────────────────
+function NoRobotDialog({ dark }) {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className={`max-w-md w-full text-center p-10 rounded-3xl border ${
+        dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm"
       }`}>
-        <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"}`}
+        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 ${
+          dark ? "bg-slate-800" : "bg-slate-50 border border-slate-100"
+        }`}>🤖</div>
+        <h2 className={`text-xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`}
           style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-          {next.scheduled_time?.slice(0, 5)}
-        </div>
-        <div className={`text-base font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>
-          {next.name}
-        </div>
-        <div className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-500"}`}>
-          {next.dose}
+          Cap robot connectat
+        </h2>
+        <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
+          No hem trobat cap Care-E associat al teu compte. Configura el teu robot per començar a monitorar.
+        </p>
+        <div className={`text-xs px-4 py-3 rounded-xl ${
+          dark ? "bg-slate-800 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-100"
+        }`}>
+          Contacta amb el teu proveïdor o afegeix un robot des de la configuració.
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -484,79 +348,52 @@ export default function DashboardPage() {
   const [alerts,  setAlerts]  = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-  
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 1. Robot de l'usuari
     const { data: robotData } = await supabase
-      .from("robots")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
+      .from("robots").select("*").eq("owner_id", user.id).single();
     setRobot(robotData);
-
     if (!robotData) { setLoading(false); return; }
 
-    // 2. Pacient del robot
     const { data: patientData } = await supabase
-      .from("patients")
-      .select("*")
-      .eq("robot_id", robotData.id)
-      .single();
+      .from("patients").select("*").eq("robot_id", robotData.id).single();
     setPatient(patientData);
-
     if (!patientData) { setLoading(false); return; }
 
-    // 3. Medicacions d'avui amb el seu log
-    const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
     const dayName = new Date().toLocaleDateString("ca-ES", { weekday: "long" }).toLowerCase();
-
     const { data: medsData } = await supabase
       .from("medications")
-      .select(`
-        *,
-        medication_logs (status, dispensed_at)
-      `)
+      .select("*, medication_logs (status, dispensed_at)")
       .eq("patient_id", patientData.id)
       .eq("active", true)
       .contains("days", [dayName])
       .order("scheduled_time");
 
-    // Afegim el log_status a cada medicació
-    const medsWithStatus = (medsData ?? []).map(m => ({
-      ...m,
-      log_status: m.medication_logs?.[0]?.status ?? "pending",
-    }));
-    setMeds(medsWithStatus);
+    setMeds((medsData ?? []).map(m => ({
+      ...m, log_status: m.medication_logs?.[0]?.status ?? "pending",
+    })));
 
-    // 4. Logs d'activitat (últims 10)
     const { data: logsData } = await supabase
-      .from("activity_logs")
-      .select("*")
-      .eq("robot_id", robotData.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
+      .from("activity_logs").select("*").eq("robot_id", robotData.id)
+      .order("created_at", { ascending: false }).limit(10);
     setLogs(logsData ?? []);
 
-    // 5. Alertes
     const { data: alertsData } = await supabase
-      .from("alerts")
-      .select("*")
-      .eq("robot_id", robotData.id)
+      .from("alerts").select("*").eq("robot_id", robotData.id)
       .order("created_at", { ascending: false });
     setAlerts(alertsData ?? []);
 
     setLoading(false);
   };
 
-  // Salutació dinàmica
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Bon dia" : hour < 20 ? "Bona tarda" : "Bona nit";
 
@@ -575,20 +412,15 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
-            style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}}
-          />
-          <span className={`text-sm font-medium ${
-            robot?.status === "online"
-              ? dark ? "text-green-400" : "text-green-600"
-              : dark ? "text-slate-400" : "text-slate-500"
-          }`}>
+          <span className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
+            style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}} />
+          <span className={`text-sm font-medium ${robot?.status === "online" ? (dark ? "text-green-400" : "text-green-600") : (dark ? "text-slate-400" : "text-slate-500")}`}>
             {robot?.status === "online" ? "En línia" : "Desconnectat"}
           </span>
         </div>
       </div>
 
+      {/* States */}
       {loading ? (
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-4">
@@ -599,6 +431,10 @@ export default function DashboardPage() {
             <Skeleton dark={dark} className="h-48" />
           </div>
         </div>
+
+      ) : !robot ? (
+        <NoRobotDialog dark={dark} />
+
       ) : (
         <>
           <StatsRow meds={meds} alerts={alerts} dark={dark} />
