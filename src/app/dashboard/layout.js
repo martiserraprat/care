@@ -29,7 +29,6 @@ export default function DashboardLayout({ children }) {
           dark ? "bg-slate-950" : "bg-slate-50"
         }`}>
           <Sidebar />
-
           {/* Mobile overlay */}
           {sidebarOpen && (
             <div

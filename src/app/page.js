@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase"
+import { useRouter } from "next/navigation"
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const IconShield = () => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>);
@@ -111,7 +113,49 @@ export default function LandingPage() {
   const [dark, setDark]       = useState(false); // light per defecte — més amigable
   const [scrolled, setScrolled] = useState(false);
   const [authMode, setAuthMode] = useState(null);
+  const [email, setEmail]       = useState("")
+  const [password, setPassword] = useState("")
+  const [name, setName]         = useState("")
+  const [error, setError]       = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const supabase = createClient()
+  const router   = useRouter()
+  
+  const switchMode = (mode) => {
+    setAuthMode(mode)
+    setEmail("")
+    setPassword("")
+    setName("")
+    setError(null)
+}
 
+  const handleLogin = async () => {
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setError(error.message)
+    } else {
+      router.push("/dashboard")
+    }
+    setLoading(false)
+  }
+
+  const handleRegister = async () => {
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
+    })
+    if (error) {
+      setError(error.message)
+    } else {
+      setError("Comprova el correu per confirmar el compte ✉️")
+    }
+    setLoading(false)
+  }
   useEffect(() => {
     const saved = localStorage.getItem("care-theme");
     if (saved) setDark(saved === "dark");
@@ -165,11 +209,12 @@ export default function LandingPage() {
       }`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 ${dark ? "bg-sky-500" : "bg-sky-500"}`}
-              style={{ boxShadow: "0 4px 14px rgba(14,165,233,0.35)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0`}>
+              <img 
+                src="/favicon.ico" 
+                alt="Icono" 
+                className="w-10 h-10 object-contain" 
+              />
             </div>
             <div>
               <span className={`font-bold text-base tracking-tight ${dark ? "text-white" : "text-slate-900"}`}
@@ -189,14 +234,16 @@ export default function LandingPage() {
               }`}>
               {dark ? <IconSun /> : <IconMoon />}
             </button>
-            <button onClick={() => setAuthMode("login")}
+            <button onClick={() => switchMode("login")}
               className={`hidden sm:block px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                dark ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-100"
+                dark ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-200"
               }`}>
               Iniciar sessió
             </button>
-            <button onClick={() => setAuthMode("register")}
-              className="btn-primary px-5 py-2 rounded-xl text-sm">
+            <button onClick={() => switchMode("register")}
+              className={`hidden sm:block px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                dark ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-200"
+              }`}>
               Registrar-se
             </button>
           </div>
@@ -235,13 +282,15 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap gap-3 animate-fade-up delay-300">
-                <button onClick={() => setAuthMode("register")}
-                  className="btn-primary px-7 py-3.5 rounded-2xl text-sm font-semibold">
+                <button onClick={() => switchMode("register")}
+                  className={`btn-primary px-7 py-3.5 rounded-2xl text-sm font-semibold transition-colors ${
+                    dark ? "hover:bg-slate-800" : "hover:bg-sky-400"
+                  }`}>
                   Accedir al Dashboard →
                 </button>
                 <a href="#features"
                   className={`px-7 py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${
-                    dark ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    dark ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-600 hover:bg-slate-300"
                   }`}>
                   Descobrir funcions
                 </a>
@@ -386,13 +435,15 @@ export default function LandingPage() {
             Registra't i accedeix al dashboard per gestionar Care-E des de qualsevol dispositiu, en qualsevol moment.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => setAuthMode("register")}
-              className="btn-primary px-8 py-3.5 rounded-2xl text-sm font-semibold">
+            <button onClick={() => switchMode("register")}
+              className={`btn-primary px-8 py-3.5 rounded-2xl text-sm font-semibold transition-colors ${
+                dark ? "border-slate-700 hover:bg-slate-700" : "border-slate-200 hover:bg-sky-400"
+              }`}>
               Crear compte gratuït
             </button>
-            <button onClick={() => setAuthMode("login")}
+            <button onClick={() => switchMode("login")}
               className={`px-8 py-3.5 rounded-2xl text-sm font-semibold border transition-colors ${
-                dark ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-600 hover:bg-white"
+                dark ? "border-slate-700 text-slate-300 hover:bg-slate-800" : "border-slate-200 text-slate-600 hover:bg-slate-300"
               }`}>
               Ja tinc compte
             </button>
@@ -404,9 +455,6 @@ export default function LandingPage() {
       <footer className={`border-t py-10 ${dark ? "border-slate-800 bg-slate-950" : "border-slate-100 bg-white"}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-sky-500 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
             <span className={`font-semibold text-sm ${dark ? "text-white" : "text-slate-800"}`}
               style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Care-E</span>
           </div>
@@ -423,7 +471,7 @@ export default function LandingPage() {
       {authMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}
-          onClick={(e) => e.target === e.currentTarget && setAuthMode(null)}>
+          onClick={(e) => e.target === e.currentTarget && switchMode(null)}>
           <div className={`w-full max-w-md rounded-3xl p-7 border ${
             dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-2xl"
           }`}>
@@ -442,7 +490,7 @@ export default function LandingPage() {
                   {authMode === "login" ? "Benvingut de nou 👋" : "Crea el teu compte"}
                 </h2>
               </div>
-              <button onClick={() => setAuthMode(null)}
+              <button onClick={() => switchMode(null)}
                 className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-colors ${
                   dark ? "bg-slate-800 hover:bg-slate-700 text-slate-400" : "bg-slate-100 hover:bg-slate-200 text-slate-500"
                 }`}>✕</button>
@@ -451,7 +499,7 @@ export default function LandingPage() {
             {/* Toggle */}
             <div className={`flex rounded-xl p-1 mb-5 ${dark ? "bg-slate-800" : "bg-slate-100"}`}>
               {[["login", "Iniciar sessió"], ["register", "Registrar-se"]].map(([m, label]) => (
-                <button key={m} onClick={() => setAuthMode(m)}
+                <button key={m} onClick={() => switchMode(m)}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                     authMode === m
                       ? "bg-sky-500 text-white shadow-sm"
@@ -461,33 +509,72 @@ export default function LandingPage() {
                 </button>
               ))}
             </div>
-
             {/* Fields */}
             <div className="space-y-4">
               {authMode === "register" && (
                 <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>NOM COMPLET</label>
-                  <input type="text" placeholder="El teu nom" className={inputCls} />
+                  <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>
+                    NOM COMPLET
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="El teu nom"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
               )}
               <div>
-                <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>CORREU ELECTRÒNIC</label>
-                <input type="email" placeholder="nom@exemple.com" className={inputCls} />
+                <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>
+                  CORREU ELECTRÒNIC
+                </label>
+                <input
+                  type="email"
+                  placeholder="nom@exemple.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className={inputCls}
+                />
               </div>
               <div>
-                <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>CONTRASENYA</label>
-                <input type="password" placeholder="••••••••" className={inputCls} />
+                <label className={`block text-xs font-semibold mb-1.5 ${dark ? "text-slate-400" : "text-slate-500"}`}>
+                  CONTRASENYA
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className={inputCls}
+                />
               </div>
+              {/* Missatge d'error o confirmació */}
+              {error && (
+                <p className={`text-xs px-3 py-2 rounded-xl ${
+                  error.includes("Comprova")
+                    ? dark ? "bg-green-950/60 text-green-400" : "bg-green-50 text-green-700"
+                    : dark ? "bg-red-950/60 text-red-400"   : "bg-red-50 text-red-600"
+                }`}>
+                  {error}
+                </p>
+              )}
             </div>
-
-            <button className="w-full mt-5 py-3.5 rounded-2xl text-sm font-semibold text-white font-semibold transition-all duration-200 hover:-translate-y-px" style={{ background: "linear-gradient(135deg, #0ea5e9, #0284c7)", boxShadow: "0 4px 16px rgba(14,165,233,0.3)" }}>
-              {authMode === "login" ? "Entrar al Dashboard →" : "Crear compte →"}
+            <button
+              onClick={authMode === "login" ? handleLogin : handleRegister}
+              disabled={loading}
+              className="w-full mt-5 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              style={{ background: "linear-gradient(135deg, #0ea5e9, #0284c7)", boxShadow: "0 4px 16px rgba(14,165,233,0.3)" }}
+            >
+              {loading
+                ? "Carregant..."
+                : authMode === "login" ? "Entrar al Dashboard →" : "Crear compte →"
+              }
             </button>
-
             <p className={`text-xs text-center mt-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>
               {authMode === "login"
-                ? <><span>Nou aquí? </span><button onClick={() => setAuthMode("register")} className="text-sky-500 hover:underline font-medium">Crea un compte</button></>
-                : <><span>Ja tens compte? </span><button onClick={() => setAuthMode("login")} className="text-sky-500 hover:underline font-medium">Inicia sessió</button></>
+                ? <><span>Nou aquí? </span><button onClick={() => switchMode("register")} className="text-sky-500 hover:underline font-medium">Crea un compte</button></>
+                : <><span>Ja tens compte? </span><button onClick={() => switchMode("login")} className="text-sky-500 hover:underline font-medium">Inicia sessió</button></>
               }
             </p>
           </div>

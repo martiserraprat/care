@@ -37,11 +37,12 @@ export default function Sidebar() {
 
         {/* Logo — same as landing nav */}
         <div className={`flex items-center gap-3 px-3 py-3 mb-3 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-          <div className="w-9 h-9 rounded-2xl bg-sky-500 flex items-center justify-center flex-shrink-0"
-            style={{ boxShadow: "0 4px 14px rgba(14,165,233,0.35)" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
+          <div className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <img 
+              src="../favicon.ico" 
+              alt="Icono" 
+              className="w-10 h-10 object-contain" 
+            />
           </div>
           <div>
             <div className={`font-bold text-sm leading-tight ${dark ? "text-white" : "text-slate-900"}`}
