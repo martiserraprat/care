@@ -7,15 +7,18 @@ import Sidebar from "@/components/Sidebar";
 export const ThemeContext   = createContext({ theme: "light", setTheme: () => {} });
 export const SidebarContext = createContext({ open: false,    setOpen:  () => {} });
 
+// Llegeix el tema del localStorage de forma síncrona
+// per evitar el flash de tema incorrecte en el primer render
+function getInitialTheme() {
+  if (typeof window === "undefined") return "light"; // servidor
+  return localStorage.getItem("care-theme") ?? "light";
+}
+
 export default function DashboardLayout({ children }) {
-  const [theme, setTheme]             = useState("light");
+  const [theme, setTheme]             = useState(getInitialTheme);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("care-theme") || "light";
-    setTheme(saved);
-  }, []);
-
+  // Sincronitza al localStorage cada cop que canvia
   useEffect(() => {
     localStorage.setItem("care-theme", theme);
   }, [theme]);
@@ -29,7 +32,7 @@ export default function DashboardLayout({ children }) {
           dark ? "bg-slate-950" : "bg-slate-50"
         }`}>
           <Sidebar />
-          {/* Mobile overlay */}
+
           {sidebarOpen && (
             <div
               className="fixed inset-0 bg-black/40 z-30 md:hidden backdrop-blur-sm"
@@ -37,7 +40,6 @@ export default function DashboardLayout({ children }) {
             />
           )}
 
-          {/* Main content — no navbar */}
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-w-0">
             {children}
           </main>
