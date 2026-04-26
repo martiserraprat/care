@@ -484,6 +484,12 @@ export default function DashboardPage() {
   const [alerts,  setAlerts]  = useState([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -549,14 +555,6 @@ export default function DashboardPage() {
 
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchData();
-
-    // Actualitza les dades cada 30 segons
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Salutació dinàmica
   const hour = new Date().getHours();

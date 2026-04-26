@@ -109,13 +109,9 @@ const Robot = ({ dark }) => {
   );
 };
 
-function getInitialTheme() {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("care-theme") === "dark";
-}
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [dark, setDark] = useState(getInitialTheme);// light per defecte — més amigable
+  const [dark, setDark] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [authMode, setAuthMode] = useState(null);
   const [email, setEmail]       = useState("")
@@ -132,19 +128,21 @@ export default function LandingPage() {
     setPassword("")
     setName("")
     setError(null)
-}
+  };
 
   const handleLogin = async () => {
-    setLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message)
+      setError(error.message);
     } else {
-      router.push("/dashboard")
+      // Assegura que el tema està guardat abans de redirigir
+      localStorage.setItem("care-theme", dark ? "dark" : "light");
+      router.push("/dashboard");
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleRegister = async () => {
     setLoading(true)
@@ -156,19 +154,24 @@ export default function LandingPage() {
     })
     if (error) {
       setError(error.message)
-    } else {
-      setError("Comprova el correu per confirmar el compte ✉️")
+    }  else {
+      localStorage.setItem("care-theme", dark ? "dark" : "light");
+      setError("Comprova el correu per confirmar el compte ✉️");
     }
     setLoading(false)
-  }
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem("care-theme");
     if (saved) setDark(saved === "dark");
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("care-theme", dark ? "dark" : "light");
-  }, [dark]);
+  // quan l'usuari canvia el tema a la landing, guarda
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("care-theme", next ? "dark" : "light");
+  };
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -202,8 +205,10 @@ export default function LandingPage() {
   }`;
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${dark ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"}`}>
-
+    <div suppressHydrationWarning
+    className={`min-h-screen transition-colors duration-300 ${
+      dark ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"
+    }`}>
       {/* NAV */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
         scrolled
@@ -233,12 +238,9 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => setDark(!dark)}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                dark ? "bg-slate-800 hover:bg-slate-700 text-slate-400" : "bg-slate-100 hover:bg-slate-200 text-slate-500"
-              }`}>
-              {dark ? <IconSun /> : <IconMoon />}
-            </button>
+          <button onClick={toggleDark}>
+            {dark ? <IconSun /> : <IconMoon />}
+          </button>
             <button onClick={() => switchMode("login")}
               className={`hidden sm:block px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 dark ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-200"
