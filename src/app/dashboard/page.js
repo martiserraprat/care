@@ -2,7 +2,7 @@
 "use client";
 
 import { useContext, useState, useEffect } from "react";
-import { ThemeContext } from "@/app/dashboard/layout";
+import { ThemeContext, SidebarContext } from "@/app/dashboard/layout";
 import { createClient } from "@/lib/supabase";
 
 const supabase = createClient();
@@ -34,6 +34,8 @@ function Card({ children, className = "", dark }) {
     </div>
   );
 }
+
+
 
 function Badge({ children, color = "sky", dark }) {
   const map = {
@@ -70,11 +72,11 @@ function StatsRow({ meds, alerts, dark }) {
     <div className="grid grid-cols-3 gap-3 sm:gap-4">
       {stats.map(({ value, label, badge, bColor }) => (
         <Card key={label} dark={dark} className="p-4 sm:p-5">
-          <div className={`text-2xl sm:text-3xl font-bold mb-1.5 ${
+          <div className={`text-2xl sm:text-3xl font-bold font-jakarta mb-1.5 ${
             bColor === "sky" ? (dark ? "text-sky-400" : "text-sky-600") :
             bColor === "green" ? (dark ? "text-green-400" : "text-green-600") :
             (dark ? "text-amber-400" : "text-amber-600")
-          }`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{value}</div>
+          }`}>{value}</div>
           <p className={`text-sm mb-2.5 ${dark ? "text-slate-300" : "text-slate-700"}`}>{label}</p>
           <Badge color={bColor} dark={dark}>{badge}</Badge>
         </Card>
@@ -100,8 +102,8 @@ function StatusCard({ robot, patient, dark }) {
           {robot?.status === "online" ? "Care-E connectat" : "Care-E desconnectat"}
         </span>
       </div>
-      <h2 className={`text-2xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`}
-        style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
+      <h2 className={`text-2xl font-bold mb-2 font-jakarta ${dark ? "text-white" : "text-slate-900"}`}
+        >
         {patient?.full_name ?? "Usuari"}
       </h2>
       {lastSeen && (
@@ -134,7 +136,7 @@ function DispenseCard({ robot, dark }) {
     <Card dark={dark} className="p-6 flex flex-col items-center text-center justify-between gap-5">
       <div>
         <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"}`}>💊</div>
-        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Control Manual</h3>
+        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
         <p className={`text-sm leading-relaxed max-w-[180px] mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
       </div>
       {st === "done" ? (
@@ -153,7 +155,7 @@ function MedicationTable({ meds, loading, dark }) {
   return (
     <Card dark={dark} className="overflow-hidden">
       <div className={`flex items-center justify-between px-6 py-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Medicació d'avui</h3>
+        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Medicació d'avui</h3>
         <span className={`text-sm capitalize ${dark ? "text-slate-500" : "text-slate-400"}`}>{today}</span>
       </div>
       {loading ? (
@@ -221,7 +223,7 @@ function AddMedForm({ patientId, onAdded, dark }) {
 
   return (
     <Card dark={dark} className="p-6">
-      <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Afegir medicació</h3>
+      <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Afegir medicació</h3>
       <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>Programa una nova pastilla per a l'usuari.</p>
       <div className="space-y-4">
         <div>
@@ -257,7 +259,7 @@ function ActivityTimeline({ logs, loading, dark }) {
   return (
     <Card dark={dark} className="overflow-hidden">
       <div className={`flex items-center gap-2 px-6 py-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Activitat recent</h3>
+        <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Activitat recent</h3>
       </div>
       <div className="p-4 space-y-2">
         {loading ? (
@@ -295,12 +297,12 @@ function NextMedPanel({ meds, dark }) {
 
   return (
     <Card dark={dark} className="p-6 h-fit">
-      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Propera medicació</h3>
+      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Propera medicació</h3>
       {!next ? (
         <p className={`text-sm text-center py-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>Tota la medicació d'avui ja s'ha pres ✓</p>
       ) : (
         <div className={`p-5 rounded-2xl border ${dark ? "border-sky-800/40 bg-sky-950/40" : "border-sky-100 bg-sky-50"}`}>
-          <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"}`} style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{next.scheduled_time?.slice(0, 5)}</div>
+          <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"} font-jakarta`}>{next.scheduled_time?.slice(0, 5)}</div>
           <div className={`text-base font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>{next.name}</div>
           <div className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-500"}`}>{next.dose}</div>
         </div>
@@ -319,8 +321,8 @@ function NoRobotDialog({ dark }) {
         <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 ${
           dark ? "bg-slate-800" : "bg-slate-50 border border-slate-100"
         }`}>🤖</div>
-        <h2 className={`text-xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"}`}
-          style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
+        <h2 className={`text-xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}
+          >
           Cap robot connectat
         </h2>
         <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
@@ -340,7 +342,7 @@ function NoRobotDialog({ dark }) {
 export default function DashboardPage() {
   const { theme } = useContext(ThemeContext);
   const dark = theme === "dark";
-
+  const { setOpen } = useContext(SidebarContext);
   const [robot,   setRobot]   = useState(null);
   const [patient, setPatient] = useState(null);
   const [meds,    setMeds]    = useState([]);
@@ -402,15 +404,31 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className={`text-2xl font-bold ${dark ? "text-white" : "text-slate-900"}`}
-            style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
-            {greeting}! 👋
-          </h1>
-          <p className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-400"}`}>
-            Aquí tens el resum d'avui de Care-E.
-          </p>
+        <div className="flex items-center gap-3">
+          {/* Hamburguesa — només mòbil */}
+          <button
+            className={`md:hidden w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+              dark ? "bg-slate-800 hover:bg-slate-700 text-slate-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+            }`}
+            onClick={() => setOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+
+          <div>
+            <h1 className={`text-2xl font-bold ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>
+              {greeting}! 👋
+            </h1>
+            <p className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-400"}`}>
+              Aquí tens el resum d'avui de Care-E.
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
             style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}} />

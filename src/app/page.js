@@ -227,8 +227,7 @@ export default function LandingPage() {
               />
             </div>
             <div>
-              <span className={`font-bold text-base tracking-tight ${dark ? "text-white" : "text-slate-900"}`}
-                style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
+              <span className={`font-bold text-base tracking-tight ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>
                 Care-E
               </span>
               <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -277,8 +276,8 @@ export default function LandingPage() {
                 Care-E online · UAB Escola d'Enginyeria
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-5 animate-fade-up delay-100"
-                style={{ fontFamily: "var(--font-jakarta, sans-serif)", letterSpacing: "-0.02em" }}>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-5 animate-fade-up delay-100 font-jakarta"
+                style={{ letterSpacing: "-0.02em" }}>
                 El company perfecte<br />
                 <span className={dark ? "text-sky-400" : "text-sky-500"}>per a les persones</span><br />
                 que estimes.
@@ -311,8 +310,7 @@ export default function LandingPage() {
                   { n: "100%", l: "Veu natural" },
                 ].map(({ n, l }) => (
                   <div key={l}>
-                    <div className={`text-xl font-bold mb-0.5 ${dark ? "text-sky-400" : "text-sky-600"}`}
-                      style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{n}</div>
+                    <div className={`text-xl font-bold mb-0.5 ${dark ? "text-sky-400" : "text-sky-600"} font-jakarta`}>{n}</div>
                     <div className={`text-xs ${dark ? "text-slate-500" : "text-slate-400"}`}>{l}</div>
                   </div>
                 ))}
@@ -354,8 +352,8 @@ export default function LandingPage() {
             }`}>
               Funcionalitats
             </span>
-            <h2 className="mt-5 text-3xl sm:text-4xl font-bold mb-3"
-              style={{ fontFamily: "var(--font-jakarta, sans-serif)", letterSpacing: "-0.02em" }}>
+            <h2 className="mt-5 text-3xl sm:text-4xl font-bold mb-3 font-jakarta"
+              style={{letterSpacing: "-0.02em" }}>
               Tot el necessari per<br />
               <span className={dark ? "text-sky-400" : "text-sky-500"}>cuidar de veritat.</span>
             </h2>
@@ -372,8 +370,7 @@ export default function LandingPage() {
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${c.icon}`}>
                     {f.icon}
                   </div>
-                  <h3 className={`font-semibold text-base mb-2 ${dark ? "text-white" : "text-slate-800"}`}
-                    style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
+                  <h3 className={`font-semibold text-base mb-2 ${dark ? "text-white" : "text-slate-800"} font-jakarta`}>
                     {f.title}
                   </h3>
                   <p className={`text-sm leading-relaxed ${dark ? "text-slate-400" : "text-slate-500"}`}>
@@ -393,8 +390,8 @@ export default function LandingPage() {
             <span className={`text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full ${
               dark ? "bg-sky-950 text-sky-400 border border-sky-800" : "bg-sky-50 text-sky-600 border border-sky-200"
             }`}>Com funciona</span>
-            <h2 className="mt-5 text-3xl sm:text-4xl font-bold"
-              style={{ fontFamily: "var(--font-jakarta, sans-serif)", letterSpacing: "-0.02em" }}>
+            <h2 className="mt-5 text-3xl sm:text-4xl font-bold font-jakarta"
+              style={{letterSpacing: "-0.02em" }}>
               Simple per a la família.<br />
               <span className={dark ? "text-sky-400" : "text-sky-500"}>Intel·ligent per al robot.</span>
             </h2>
@@ -414,8 +411,8 @@ export default function LandingPage() {
                 <div className={`text-xs font-bold tracking-widest mb-2 ${dark ? "text-sky-500" : "text-sky-500"}`}>
                   PAS {n}
                 </div>
-                <h3 className={`font-semibold text-base mb-2 ${dark ? "text-white" : "text-slate-800"}`}
-                  style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>{title}</h3>
+                <h3 className={`font-semibold text-base mb-2 ${dark ? "text-white" : "text-slate-800"} font-jakarta`}
+                  >{title}</h3>
                 <p className={`text-sm ${dark ? "text-slate-400" : "text-slate-500"}`}>{desc}</p>
               </div>
             ))}
@@ -433,8 +430,8 @@ export default function LandingPage() {
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4"
-            style={{ fontFamily: "var(--font-jakarta, sans-serif)", letterSpacing: "-0.02em" }}>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 font-jakarta"
+            style={{letterSpacing: "-0.02em" }}>
             Cuida les persones que<br />
             <span className={dark ? "text-sky-400" : "text-sky-500"}>t'importen.</span>
           </h2>
@@ -462,8 +459,8 @@ export default function LandingPage() {
       <footer className={`border-t py-10 ${dark ? "border-slate-800 bg-slate-950" : "border-slate-100 bg-white"}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <span className={`font-semibold text-sm ${dark ? "text-white" : "text-slate-800"}`}
-              style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Care-E</span>
+            <span className={`font-semibold text-sm ${dark ? "text-white" : "text-slate-800"} font-jakarta`}
+              >Care-E</span>
           </div>
           <p className={`text-xs text-center ${dark ? "text-slate-600" : "text-slate-400"}`}>
             © 2025–26 UAB Escola d'Enginyeria · Robòtica, Llenguatge i Planificació
@@ -489,11 +486,11 @@ export default function LandingPage() {
                   <div className="w-8 h-8 rounded-xl bg-sky-500 flex items-center justify-center">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                   </div>
-                  <span className={`font-semibold ${dark ? "text-white" : "text-slate-800"}`}
-                    style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Care-E</span>
+                  <span className={`font-semibold ${dark ? "text-white" : "text-slate-800"} font-jakarta`}
+                    >Care-E</span>
                 </div>
-                <h2 className={`text-xl font-bold ${dark ? "text-white" : "text-slate-900"}`}
-                  style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>
+                <h2 className={`text-xl font-bold ${dark ? "text-white" : "text-slate-900"} font-jakarta`}
+                  >
                   {authMode === "login" ? "Benvingut de nou 👋" : "Crea el teu compte"}
                 </h2>
               </div>

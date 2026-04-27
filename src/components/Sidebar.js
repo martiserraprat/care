@@ -76,8 +76,8 @@ export default function Sidebar() {
             <img src="/favicon.ico" alt="Care-E" className="w-10 h-10 object-contain" />
           </div>
           <div>
-            <div className={`font-bold text-sm leading-tight ${dark ? "text-white" : "text-slate-900"}`}
-              style={{ fontFamily: "var(--font-jakarta, sans-serif)" }}>Care-E</div>
+            <div className={`font-bold text-sm leading-tight font-jakarta ${dark ? "text-white" : "text-slate-900"}`}
+              >Care-E</div>
             <div className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border inline-block ${
               dark ? "bg-sky-950 border-sky-800 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-600"
             }`}>Beta</div>
