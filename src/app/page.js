@@ -172,6 +172,11 @@ export default function LandingPage() {
     localStorage.setItem("care-theme", next ? "dark" : "light");
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      authMode === "login" ? handleLogin() : handleRegister();
+    }
+  };
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", fn, { passive: true });
@@ -537,6 +542,7 @@ export default function LandingPage() {
                   placeholder="nom@exemple.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleRegister())}
                   className={inputCls}
                 />
               </div>
@@ -549,6 +555,7 @@ export default function LandingPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleRegister())}
                   className={inputCls}
                 />
               </div>
