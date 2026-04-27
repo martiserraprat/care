@@ -7,9 +7,6 @@ import Sidebar from "@/components/Sidebar";
 export const ThemeContext   = createContext({ theme: "light", setTheme: () => {} });
 export const SidebarContext = createContext({ open: false,    setOpen:  () => {} });
 
-// Llegeix el tema del localStorage de forma síncrona
-// per evitar el flash de tema incorrecte en el primer render
-
 export default function DashboardLayout({ children }) {
   const [theme, setTheme]   = useState("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);

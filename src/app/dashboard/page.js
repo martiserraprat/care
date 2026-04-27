@@ -3,9 +3,7 @@
 
 import { useContext, useState, useEffect } from "react";
 import { ThemeContext, SidebarContext } from "@/app/dashboard/layout";
-import { createClient } from "@/lib/supabase";
-
-const supabase = createClient();
+import { supabase } from "@/lib/supabase"
 
 const BTN_PRIMARY = {
   background: "linear-gradient(135deg, #0ea5e9, #0284c7)",
@@ -92,29 +90,37 @@ function StatusCard({ robot, patient, dark }) {
     ? new Date(robot.updated_at).toLocaleTimeString("ca-ES", { hour: "2-digit", minute: "2-digit" })
     : null;
 
+  // Si fa més de 30s sense ping → considerem offline
+  const isReallyOnline = robot?.status === "online" &&
+    robot?.updated_at &&
+    (new Date() - new Date(robot.updated_at)) < 30000;
+
   return (
     <Card dark={dark} className="p-6 lg:col-span-2 relative overflow-hidden">
       <div className="absolute -bottom-8 -right-8 text-[110px] opacity-[0.04] pointer-events-none select-none">🤖</div>
+
       <div className="flex items-center gap-2 mb-5">
-        <span className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500" : "bg-slate-400"}`}
-          style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}} />
-        <span className={`text-sm font-medium ${robot?.status === "online" ? (dark ? "text-green-400" : "text-green-600") : (dark ? "text-slate-400" : "text-slate-500")}`}>
-          {robot?.status === "online" ? "Care-E connectat" : "Care-E desconnectat"}
+        <span className={`w-2 h-2 rounded-full ${isReallyOnline ? "bg-green-500" : "bg-slate-400"}`}
+          style={isReallyOnline ? { boxShadow: "0 0 6px #22c55e" } : {}} />
+        <span className={`text-sm font-medium ${isReallyOnline ? (dark ? "text-green-400" : "text-green-600") : (dark ? "text-slate-400" : "text-slate-500")}`}>
+          {isReallyOnline ? "Care-E connectat" : "Care-E desconnectat"}
         </span>
       </div>
-      <h2 className={`text-2xl font-bold mb-2 font-jakarta ${dark ? "text-white" : "text-slate-900"}`}
-        >
+
+      <h2 className={`text-2xl font-bold mb-2 font-jakarta ${dark ? "text-white" : "text-slate-900"}`}>
         {patient?.full_name ?? "Usuari"}
       </h2>
       {lastSeen && (
         <p className={`text-base mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          Última actualització a les <span className={`font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{lastSeen}h</span>
+          Última actualització a les{" "}
+          <span className={`font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{lastSeen}h</span>
         </p>
       )}
+
       <div className="flex flex-wrap gap-2">
         {robot?.battery != null && <Badge color={robot.battery > 20 ? "green" : "amber"} dark={dark}>🔋 {robot.battery}% Bateria</Badge>}
         {robot?.signal && <Badge color={signalColor} dark={dark}>📶 {signalLabel}</Badge>}
-        {robot?.status === "online" && <Badge color="slate" dark={dark}>🕒 En línia</Badge>}
+        {isReallyOnline && <Badge color="slate" dark={dark}>🕒 En línia</Badge>}
       </div>
     </Card>
   );
@@ -318,12 +324,11 @@ function NoRobotDialog({ dark }) {
       <div className={`max-w-md w-full text-center p-10 rounded-3xl border ${
         dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm"
       }`}>
-        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 ${
-          dark ? "bg-slate-800" : "bg-slate-50 border border-slate-100"
-        }`}>🤖</div>
+        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6`}>
+          <img src="/favicon.ico" alt="Care-E" class="w-18 h-18 object-contain"></img></div>
         <h2 className={`text-xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}
           >
-          Cap robot connectat
+          Cap Care-E connectat
         </h2>
         <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
           No hem trobat cap Care-E associat al teu compte. Configura el teu robot per començar a monitorar.
@@ -349,6 +354,16 @@ export default function DashboardPage() {
   const [logs,    setLogs]    = useState([]);
   const [alerts,  setAlerts]  = useState([]);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    await fetchData();
+    setRetrying(false);
+  };
+  const isReallyOnline = robot?.status === "online" &&
+    robot?.updated_at &&
+    (new Date() - new Date(robot.updated_at)) < 30000;
 
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -428,12 +443,15 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${robot?.status === "online" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
-            style={robot?.status === "online" ? { boxShadow: "0 0 6px #22c55e" } : {}} />
-          <span className={`text-sm font-medium ${robot?.status === "online" ? (dark ? "text-green-400" : "text-green-600") : (dark ? "text-slate-400" : "text-slate-500")}`}>
-            {robot?.status === "online" ? "En línia" : "Desconnectat"}
+          <span className={`w-2 h-2 rounded-full ${isReallyOnline ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}
+            style={isReallyOnline ? { boxShadow: "0 0 6px #22c55e" } : {}} />
+          <span className={`text-sm font-medium ${
+            isReallyOnline
+              ? dark ? "text-green-400" : "text-green-600"
+              : dark ? "text-slate-400" : "text-slate-500"
+          }`}>
+            {isReallyOnline ? "En línia" : "Desconnectat"}
           </span>
         </div>
       </div>
@@ -452,7 +470,37 @@ export default function DashboardPage() {
 
       ) : !robot ? (
         <NoRobotDialog dark={dark} />
-
+      ) : !isReallyOnline ? (
+        // Robot vinculat però offline
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className={`max-w-md w-full text-center p-10 rounded-3xl border ${
+            dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm"
+          }`}>
+            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6 ${
+              dark ? "bg-slate-800" : "bg-slate-50 border border-slate-100"
+            }`}>📡</div>
+            <h2 className={`text-xl font-bold mb-2 font-jakarta ${dark ? "text-white" : "text-slate-900"}`}>
+              Robot offline
+            </h2>
+            <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
+              No es pot mostrar informació en directe. El robot <span className={`font-semibold ${dark ? "text-white" : "text-slate-800"}`}>{robot.name}</span> no està responent.
+            </p>
+            <div className={`text-xs px-4 py-3 rounded-xl mb-4 ${
+              dark ? "bg-slate-800 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-100"
+            }`}>
+              Última connexió: {robot.updated_at
+                ? new Date(robot.updated_at).toLocaleString("ca-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                : "Desconegut"
+              }
+            </div>
+            <button onClick={handleRetry} disabled={retrying}
+              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white hover:-translate-y-px transition-all disabled:opacity-70"
+              style={{ background: "linear-gradient(135deg, #0ea5e9, #0284c7)", boxShadow: "0 4px 16px rgba(14,165,233,0.3)" }}>
+              <span className={`inline-block ${retrying ? "animate-spin" : ""}`}>🔄</span>
+              {retrying ? " Comprovant..." : " Tornar a intentar"}
+            </button>
+          </div>
+        </div>
       ) : (
         <>
           <StatsRow meds={meds} alerts={alerts} dark={dark} />

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -119,7 +119,6 @@ export default function LandingPage() {
   const [name, setName]         = useState("")
   const [error, setError]       = useState(null)
   const [loading, setLoading]   = useState(false)
-  const supabase = createClient()
   const router   = useRouter()
   
   const switchMode = (mode) => {
