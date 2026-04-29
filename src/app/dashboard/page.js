@@ -93,7 +93,7 @@ function StatusCard({ robot, patient, dark }) {
   // Si fa més de 30s sense ping → considerem offline
   const isReallyOnline = robot?.status === "online" &&
     robot?.updated_at &&
-    (new Date() - new Date(robot.updated_at)) < 30000;
+    (new Date() - new Date(robot.updated_at)) < 60000;
 
   return (
     <Card dark={dark} className="p-6 lg:col-span-2 relative overflow-hidden">
@@ -363,7 +363,7 @@ export default function DashboardPage() {
   };
   const isReallyOnline = robot?.status === "online" &&
     robot?.updated_at &&
-    (new Date() - new Date(robot.updated_at)) < 30000;
+    (new Date() - new Date(robot.updated_at)) < 60000;
 
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -407,7 +407,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, []);
 
