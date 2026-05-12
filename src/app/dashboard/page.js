@@ -159,7 +159,7 @@ function DispenseCard({ robot, dark }) {
 function MedicationTable({ meds, loading, dark }) {
   const today = new Date().toLocaleDateString("ca-ES", { weekday: "long", day: "numeric", month: "long" });
   return (
-    <Card dark={dark} className="overflow-hidden">
+    <Card dark={dark} className="h-full overflow-hidden">
       <div className={`flex items-center justify-between px-6 py-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
         <h3 className={`text-base font-bold ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Medicació d'avui</h3>
         <span className={`text-sm capitalize ${dark ? "text-slate-500" : "text-slate-400"}`}>{today}</span>
@@ -167,7 +167,7 @@ function MedicationTable({ meds, loading, dark }) {
       {loading ? (
         <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}</div>
       ) : meds.length === 0 ? (
-        <div className={`p-10 text-center text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>No hi ha medicació programada per avui</div>
+        <div className={`flex items-center justify-center min-h-[300px] text-center text-lg ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -228,7 +228,7 @@ function AddMedForm({ patientId, onAdded, dark }) {
   };
 
   return (
-    <Card dark={dark} className="p-6">
+    <Card dark={dark} className="p-6 h-full">
       <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Afegir medicació</h3>
       <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>Programa una nova pastilla per a l'usuari.</p>
       <div className="space-y-4">
@@ -504,20 +504,23 @@ export default function DashboardPage() {
       ) : (
         <>
           <StatsRow meds={meds} alerts={alerts} dark={dark} />
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <StatusCard robot={robot} patient={patient} dark={dark} />
             <DispenseCard robot={robot} dark={dark} />
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2">
-              <MedicationTable meds={meds} loading={false} dark={dark} />
-            </div>
-            <AddMedForm patientId={patient?.id} onAdded={fetchData} dark={dark} />
+          <div className="lg:col-span-2 h-full">
+            <MedicationTable meds={meds} loading={false} dark={dark} />
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="h-full">
+              <AddMedForm
+                patientId={patient?.id}
+                onAdded={fetchData}
+                dark={dark}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
             <div className="lg:col-span-2">
               <ActivityTimeline logs={logs} loading={false} dark={dark} />
             </div>
