@@ -182,9 +182,21 @@ function MedicationTable({ meds, loading, dark }) {
             <tbody>
               {meds.map((m) => (
                 <tr key={m.id} className={`border-b last:border-0 transition-colors ${dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-50 hover:bg-slate-50"}`}>
-                  <td className="px-6 py-4"><span className={`text-sm font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>{m.scheduled_time?.slice(0, 5)}</span></td>
-                  <td className="px-4 py-4"><span className={`text-sm ${dark ? "text-slate-200" : "text-slate-800"}`}>{m.name}</span></td>
-                  <td className="px-4 py-4 hidden sm:table-cell"><span className={`text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>{m.dose}</span></td>
+                  <td className="px-6 py-4">
+                    <span className={`text-sm font-semibold ${dark ? "text-sky-400" : "text-sky-600"}`}>
+                      {m.scheduled_time?.slice(0, 5)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className={`text-sm ${dark ? "text-slate-200" : "text-slate-800"}`}>
+                      {m.slot_inventory?.medication_name || "Medicament desconegut"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 hidden sm:table-cell">
+                    <span className={`text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>
+                      {m.dose} {m.dose === 1 ? "pastilla" : "pastilles"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <Badge color={m.log_status === "taken" || m.log_status === "dispensed" ? "green" : "amber"} dark={dark}>
                       {m.log_status === "taken" || m.log_status === "dispensed" ? "✓ Pres" : "Pendent"}
@@ -303,14 +315,28 @@ function NextMedPanel({ meds, dark }) {
 
   return (
     <Card dark={dark} className="p-6 h-fit">
-      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Propera medicació</h3>
+      <h3 className={`text-base font-bold mb-4 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>
+        Propera medicació
+      </h3>
       {!next ? (
-        <p className={`text-sm text-center py-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>Tota la medicació d'avui ja s'ha pres ✓</p>
+        <p className={`text-sm text-center py-4 ${dark ? "text-slate-500" : "text-slate-400"}`}>
+          Tota la medicació d'avui ja s'ha pres ✓
+        </p>
       ) : (
         <div className={`p-5 rounded-2xl border ${dark ? "border-sky-800/40 bg-sky-950/40" : "border-sky-100 bg-sky-50"}`}>
-          <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"} font-jakarta`}>{next.scheduled_time?.slice(0, 5)}</div>
-          <div className={`text-base font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>{next.name}</div>
-          <div className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-500"}`}>{next.dose}</div>
+          <div className={`text-3xl font-bold mb-1 ${dark ? "text-sky-400" : "text-sky-600"} font-jakarta`}>
+            {next.scheduled_time?.slice(0, 5)}
+          </div>
+          
+          {/* ARREGLAT: Busquem el nom dins de slot_inventory */}
+          <div className={`text-base font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>
+            {next.slot_inventory?.medication_name || "Medicament desconegut"}
+          </div>
+          
+          {/* ARREGLAT: Afegim el text "pastilla/es" al costat del número de la dosi */}
+          <div className={`text-sm mt-0.5 ${dark ? "text-slate-500" : "text-slate-500"}`}>
+            {next.dose} {next.dose === 1 ? "pastilla" : "pastilles"}
+          </div>
         </div>
       )}
     </Card>
@@ -380,17 +406,39 @@ export default function DashboardPage() {
     if (!patientData) { setLoading(false); return; }
 
     const dayName = new Date().toLocaleDateString("ca-ES", { weekday: "long" }).toLowerCase();
-    const { data: medsData } = await supabase
-      .from("medications")
-      .select("*, medication_logs (status, dispensed_at)")
+    
+    // 1. Obtenim els horaris (COPIANT el format del teu fetchAll que funciona)
+    const { data: medsData, error: medsError } = await supabase
+      .from("dispense_schedules")
+      .select("*, slot_inventory(medication_name)") // <-- Ja no demanem els logs aquí!
       .eq("patient_id", patientData.id)
       .eq("active", true)
       .contains("days", [dayName])
       .order("scheduled_time");
 
-    setMeds((medsData ?? []).map(m => ({
-      ...m, log_status: m.medication_logs?.[0]?.status ?? "pending",
-    })));
+    if (medsError) console.error("Error meds:", medsError);
+
+    // 2. Obtenim els logs de dispensació per separat (així Supabase no es queixa)
+    // Filtrem per avui per no descarregar tot l'historial sencer
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data: todayLogs } = await supabase
+      .from("dispense_logs")
+      .select("schedule_id, status")
+      .eq("robot_id", robotData.id)
+      .gte("dispensed_at", todayStart.toISOString()); // Només els d'avui
+
+    // 3. Juntem les dues coses amb JavaScript
+    setMeds((medsData ?? []).map(m => {
+      // Busquem si hi ha algun log d'avui per a aquesta pastilla
+      const pastillaLog = todayLogs?.find(log => log.schedule_id === m.id);
+      
+      return {
+        ...m, 
+        log_status: pastillaLog ? pastillaLog.status : "pending"
+      };
+    }));
 
     const { data: logsData } = await supabase
       .from("activity_logs").select("*").eq("robot_id", robotData.id)
