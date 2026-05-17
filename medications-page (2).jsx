@@ -96,7 +96,7 @@ function ClockPicker({ value, onChange, dark }) {
               </div>
             </div>
           </div>
-          <button onClick={confirm} className="w-full py-2.5 rounded-xl bg-linear-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold">
+          <button onClick={confirm} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold">
             Confirmar — {selH}:{selM}
           </button>
         </div>
@@ -174,7 +174,7 @@ function MedicationSearch({ onSelect, dark, value }) {
   );
 }
 
-const EMPTY_SCHED = { slot_inventory_id: "", time: "", dose: "1", days: [] };
+const EMPTY_SCHED = { slot_inventory_id: "", time: "", dose: "1 pastilla", days: [] };
 
 export default function MedicationsPage() {
   const { theme } = useContext(ThemeContext);
@@ -248,32 +248,28 @@ export default function MedicationsPage() {
     await fetchAll();
     setInvSaving(false);
   };
-  
+
+  // ── FIX: elimina per robot_id + slot (no depèn d'id intern) ──────────────
   const deleteSlot = async (slotNum) => {
+    if (!robotId) return;
     const slotData = inventory[slotNum - 1];
     if (!slotData) return;
 
-    try {
-      const { error: updateError } = await supabase
-        .from("dispense_schedules")
-        .update({ active: false, slot_inventory_id: null })
-        .eq("slot_inventory_id", slotData.id);
+    // 1. Desactivar tots els horaris que apunten a aquest slot_inventory
+    await supabase
+      .from("dispense_schedules")
+      .update({ active: false })
+      .eq("slot_inventory_id", slotData.id);
 
-      if (updateError) throw updateError;
+    // 2. Eliminar el registre d'inventari per robot_id + slot (doble seguretat)
+    await supabase
+      .from("slot_inventory")
+      .delete()
+      .eq("robot_id", robotId)
+      .eq("slot", slotNum);
 
-      const { error: deleteError } = await supabase
-        .from("slot_inventory")
-        .delete()
-        .eq("id", slotData.id);
-
-      if (deleteError) throw deleteError;
-
-      setDeletingSlot(null);
-      await fetchAll();
-
-    } catch (error) {
-      console.error("Error eliminando el slot:", error.message);
-    }
+    setDeletingSlot(null);
+    await fetchAll();
   };
 
   const toggleDay = (day) => {
@@ -432,7 +428,7 @@ export default function MedicationsPage() {
                         <button
                           onClick={saveInventory}
                           disabled={invSaving || !invForm.medication_name || !invForm.pill_count}
-                          className={`flex-1 py-2.5 rounded-xl bg-linear-to-r ${color.gradBtn} text-white text-sm font-semibold disabled:opacity-50`}
+                          className={`flex-1 py-2.5 rounded-xl bg-gradient-to-r ${color.gradBtn} text-white text-sm font-semibold disabled:opacity-50`}
                         >
                           {invSaving ? "Guardant..." : "Guardar"}
                         </button>
@@ -501,7 +497,7 @@ export default function MedicationsPage() {
               <button
                 onClick={() => { setShowSchedForm(true); setSchedForm(EMPTY_SCHED); }}
                 disabled={loadedSlots.length === 0}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 hover:scale-[1.02] transition-transform disabled:opacity-40 disabled:pointer-events-none"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold shadow-lg shadow-sky-500/20 hover:scale-[1.02] transition-transform disabled:opacity-40 disabled:pointer-events-none"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -551,8 +547,8 @@ export default function MedicationsPage() {
                   <div>
                     <label className="block text-xs font-medium opacity-60 mb-1.5">Dosi</label>
                     <input
-                      type="number"
-                      placeholder="1"
+                      type="text"
+                      placeholder="Ex: 1 pastilla"
                       value={schedForm.dose}
                       onChange={e => setSchedForm(f => ({ ...f, dose: e.target.value }))}
                       className={`w-full px-4 py-2.5 rounded-xl border outline-none text-sm ${inp}`}
@@ -586,7 +582,7 @@ export default function MedicationsPage() {
                   <button
                     onClick={saveSchedule}
                     disabled={schedSaving || !schedForm.slot_inventory_id || !schedForm.time || schedForm.days.length === 0}
-                    className="flex-1 py-3 rounded-xl bg-linear-to-r from-sky-500 to-sky-600 text-white font-semibold text-sm disabled:opacity-40"
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white font-semibold text-sm disabled:opacity-40"
                   >
                     {schedSaving ? "Guardant..." : "Crear programació"}
                   </button>

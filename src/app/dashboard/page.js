@@ -143,7 +143,7 @@ function DispenseCard({ robot, dark }) {
       <div>
         <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"}`}>💊</div>
         <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
-        <p className={`text-sm leading-relaxed max-w-[180px] mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
+        <p className={`text-sm leading-relaxed max-w-45 mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
       </div>
       {st === "done" ? (
         <div className={`w-full py-3 rounded-2xl text-sm font-semibold border text-center ${dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"}`}>✓ Dispensat correctament</div>
@@ -167,7 +167,7 @@ function MedicationTable({ meds, loading, dark }) {
       {loading ? (
         <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}</div>
       ) : meds.length === 0 ? (
-        <div className={`flex items-center justify-center min-h-[300px] text-center text-lg ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
+        <div className={`flex items-center justify-center min-h-75 text-center text-lg ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -275,14 +275,14 @@ function ActivityTimeline({ logs, loading, dark }) {
         ) : (
           logs.map((a, i) => (
             <div key={a.id} className={`flex gap-4 p-4 rounded-2xl border transition-colors ${dark ? "border-slate-800/50 hover:bg-slate-800/20" : "border-slate-100 hover:bg-slate-50"}`}>
-              <div className="flex flex-col items-center gap-1 pt-1 flex-shrink-0">
+              <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
                 <div className={`w-2.5 h-2.5 rounded-full ${dot[a.type] ?? "bg-slate-400"}`} />
                 {i < logs.length - 1 && <div className={`w-px flex-1 min-h-6 rounded-full ${dark ? "bg-slate-800" : "bg-slate-100"}`} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <Badge color={color[a.type] ?? "slate"} dark={dark}>{label[a.type] ?? a.type}</Badge>
-                  <span className={`text-xs flex-shrink-0 ${dark ? "text-slate-600" : "text-slate-400"}`}>
+                  <span className={`text-xs shrink-0 ${dark ? "text-slate-600" : "text-slate-400"}`}>
                     {new Date(a.created_at).toLocaleTimeString("ca-ES", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
