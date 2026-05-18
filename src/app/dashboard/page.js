@@ -175,7 +175,6 @@ function MedicationTable({ meds, loading, dark }) {
               <tr className={`text-xs font-medium border-b ${dark ? "text-slate-500 border-slate-800" : "text-slate-400 border-slate-100"}`}>
                 <th className="px-6 py-3 text-left font-medium">Hora</th>
                 <th className="px-4 py-3 text-left font-medium">Medicament</th>
-                <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">Dosi</th>
                 <th className="px-6 py-3 text-right font-medium">Estat</th>
               </tr>
             </thead>

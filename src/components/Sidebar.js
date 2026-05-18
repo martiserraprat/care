@@ -59,7 +59,7 @@ export default function Sidebar() {
   return (
     <aside className={`
       fixed md:relative inset-y-0 left-0 z-40
-      w-60 flex-shrink-0 flex flex-col justify-between
+      w-60 shrink-0 flex flex-col justify-between
       transition-transform duration-300 ease-in-out
       ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       ${dark ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-100 shadow-sm"}
@@ -70,7 +70,7 @@ export default function Sidebar() {
 
         {/* Logo */}
         <div className={`flex items-center gap-3 px-3 py-3 mb-3 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
-          <div className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0">
             <img src="/favicon.ico" alt="Care-E" className="w-10 h-10 object-contain" />
           </div>
           <div>
@@ -114,9 +114,9 @@ export default function Sidebar() {
                     ? "text-slate-500 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent"
                 }`}>
-                  <span className={`text-sm flex-shrink-0 ${!active ? "opacity-60" : ""}`}>{icon}</span>
+                  <span className={`text-sm shrink-0 ${!active ? "opacity-60" : ""}`}>{icon}</span>
                   <span className="truncate">{label}</span>
-                  {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 flex-shrink-0" />}
+                  {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />}
                 </div>
               </Link>
             );
@@ -139,7 +139,7 @@ export default function Sidebar() {
         <div className={`flex items-center gap-3 px-2 py-2 rounded-xl ${
           dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50"
         }`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold border-2 ${
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold border-2 ${
             dark ? "bg-sky-950 border-sky-800 text-sky-400" : "bg-sky-50 border-sky-200 text-sky-600"
           }`}>
             {initial}

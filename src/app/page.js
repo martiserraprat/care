@@ -292,7 +292,7 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap gap-3 animate-fade-up delay-300">
-                <button onClick={() => switchMode("register")}
+                <button onClick={() => switchMode("login")}
                   className={`btn-primary px-7 py-3.5 rounded-2xl text-sm font-semibold transition-colors ${
                     dark ? "hover:bg-slate-800" : "hover:bg-sky-400"
                   }`}>
