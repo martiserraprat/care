@@ -4,6 +4,8 @@
 import { useContext, useState, useEffect } from "react";
 import { ThemeContext, SidebarContext } from "@/app/dashboard/layout";
 import { supabase } from "@/lib/supabase"
+import ScheduleForm from "@/components/ScheduleForm";
+import ClockPicker from "@/components/ClockPicker";
 
 const BTN_PRIMARY = {
   background: "linear-gradient(135deg, #0ea5e9, #0284c7)",
@@ -32,8 +34,6 @@ function Card({ children, className = "", dark }) {
     </div>
   );
 }
-
-
 
 function Badge({ children, color = "sky", dark }) {
   const map = {
@@ -96,7 +96,7 @@ function StatusCard({ robot, patient, dark }) {
     (new Date() - new Date(robot.updated_at)) < 60000;
 
   return (
-    <Card dark={dark} className="p-6 lg:col-span-2 relative overflow-hidden">
+    <Card dark={dark} className="p-6 dash:col-span-2 relative overflow-hidden">
       <div className="absolute -bottom-8 -right-8 text-[110px] opacity-[0.04] pointer-events-none select-none">🤖</div>
 
       <div className="flex items-center gap-2 mb-5">
@@ -142,7 +142,7 @@ function DispenseCard({ robot, dark }) {
     <Card dark={dark} className="p-6 flex flex-col items-center text-center justify-between gap-5">
       <div>
         <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"}`}>💊</div>
-        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
+        <h3 className={`text-dash font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
         <p className={`text-sm leading-relaxed max-w-45 mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
       </div>
       {st === "done" ? (
@@ -167,7 +167,7 @@ function MedicationTable({ meds, loading, dark }) {
       {loading ? (
         <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}</div>
       ) : meds.length === 0 ? (
-        <div className={`flex items-center justify-center min-h-75 text-center text-lg ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
+        <div className={`flex items-center justify-center min-h-75 text-center text-dash ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -175,7 +175,7 @@ function MedicationTable({ meds, loading, dark }) {
               <tr className={`text-xs font-medium border-b ${dark ? "text-slate-500 border-slate-800" : "text-slate-400 border-slate-100"}`}>
                 <th className="px-6 py-3 text-left font-medium">Hora</th>
                 <th className="px-4 py-3 text-left font-medium">Medicament</th>
-                <th className="px-6 py-3 text-right font-medium">Estat</th>
+                <th className="px-6 py-3 text-center font-medium">Estat</th>
               </tr>
             </thead>
             <tbody>
@@ -189,11 +189,6 @@ function MedicationTable({ meds, loading, dark }) {
                   <td className="px-4 py-4">
                     <span className={`text-sm ${dark ? "text-slate-200" : "text-slate-800"}`}>
                       {m.slot_inventory?.medication_name || "Medicament desconegut"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 hidden sm:table-cell">
-                    <span className={`text-sm ${dark ? "text-slate-500" : "text-slate-400"}`}>
-                      {m.dose} {m.dose === 1 ? "pastilla" : "pastilles"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -381,6 +376,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
 
+  const [loadedSlots, setLoadedSlots] = useState([]);
   const handleRetry = async () => {
     setRetrying(true);
     await fetchData();
@@ -405,7 +401,13 @@ export default function DashboardPage() {
     if (!patientData) { setLoading(false); return; }
 
     const dayName = new Date().toLocaleDateString("ca-ES", { weekday: "long" }).toLowerCase();
-    
+    const { data: slotsData } = await supabase
+      .from("slot_inventory")
+      .select("*")
+      .eq("robot_id", robotData.id)
+      .order("slot");
+    setLoadedSlots(slotsData || []);
+
     // 1. Obtenim els horaris (COPIANT el format del teu fetchAll que funciona)
     const { data: medsData, error: medsError } = await supabase
       .from("dispense_schedules")
@@ -428,9 +430,7 @@ export default function DashboardPage() {
       .eq("robot_id", robotData.id)
       .gte("dispensed_at", todayStart.toISOString()); // Només els d'avui
 
-    // 3. Juntem les dues coses amb JavaScript
     setMeds((medsData ?? []).map(m => {
-      // Busquem si hi ha algun log d'avui per a aquesta pastilla
       const pastillaLog = todayLogs?.find(log => log.schedule_id === m.id);
       
       return {
@@ -551,24 +551,35 @@ export default function DashboardPage() {
       ) : (
         <>
           <StatsRow meds={meds} alerts={alerts} dark={dark} />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 dash:grid-cols-3 gap-5">
             <StatusCard robot={robot} patient={patient} dark={dark} />
             <DispenseCard robot={robot} dark={dark} />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 h-full">
+          <div className="grid grid-cols-1 dash:grid-cols-3 gap-5">
+          <div className="dash:col-span-2 h-full">
             <MedicationTable meds={meds} loading={false} dark={dark} />
           </div>
             <div className="h-full">
-              <AddMedForm
-                patientId={patient?.id}
-                onAdded={fetchData}
+              <ScheduleForm
+                loadedSlots={loadedSlots}
                 dark={dark}
+                onSave={async (formData) => {
+                  await supabase.from("dispense_schedules").insert({
+                    patient_id: patient?.id,
+                    slot_inventory_id: formData.slot_inventory_id,
+                    scheduled_time: formData.time,
+                    days: formData.days,
+                    dose: formData.dose,
+                    active: true,
+                    created_by: userId,
+                  });
+                  await fetchData();
+                }}
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 dash:grid-cols-3 gap-5 items-start">
+            <div className="dash:col-span-2">
               <ActivityTimeline logs={logs} loading={false} dark={dark} />
             </div>
             <NextMedPanel meds={meds} dark={dark} />
