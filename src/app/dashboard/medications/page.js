@@ -192,7 +192,7 @@ export default function MedicationsPage() {
   const [editingSlot, setEditingSlot] = useState(null);
   const [invForm, setInvForm]         = useState({ medication_name: "", pill_count: "" });
   const [invSaving, setInvSaving]     = useState(false);
-  const [deletingSlot, setDeletingSlot] = useState(null); // slot num en confirmació
+  const [deletingSlot, setDeletingSlot] = useState(null);
 
   const [showSchedForm, setShowSchedForm] = useState(false);
   const [schedForm, setSchedForm]         = useState(EMPTY_SCHED);
@@ -354,9 +354,8 @@ export default function MedicationsPage() {
           </div>
         </div>
 
-        {/* ══ TAB INVENTARI ══════════════════════════════════════════════════ */}
         {tab === "inventory" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((slotNum) => {
               const idx       = slotNum - 1;
               const color     = COLORS[idx];
@@ -389,8 +388,6 @@ export default function MedicationsPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Confirmació eliminació */}
                   {isConfirming && (
                     <div className={`mb-4 p-4 rounded-xl border ${dark ? "bg-red-900/20 border-red-800" : "bg-red-50 border-red-200"}`}>
                       <p className="text-sm font-semibold text-red-500 mb-1">Eliminar {current?.medication_name}?</p>
@@ -411,7 +408,6 @@ export default function MedicationsPage() {
                       </div>
                     </div>
                   )}
-
                   {isEditing ? (
                     <div key={`edit-${slotNum}`} className="space-y-3">
                       <MedicationSearch
