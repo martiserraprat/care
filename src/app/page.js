@@ -223,7 +223,7 @@ export default function LandingPage() {
       }`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0`}>
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0`}>
               <img 
                 src="/favicon.ico" 
                 alt="Icono" 
