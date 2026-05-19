@@ -4,8 +4,8 @@ import { useContext, useState, useEffect, useRef } from "react";
 import { ThemeContext, SidebarContext } from "@/app/dashboard/layout";
 import { supabase } from "@/lib/supabase";
 
-import ClockPicker from "@/components/ClockPicker";
-import ScheduleForm from "@/components/ScheduleForm";
+import ClockPicker from "@/components/medications/ClockPicker";
+import ScheduleForm from "@/components/medications/ScheduleForm";
 
 const DAYS_CA = [
   { key: "dilluns",   short: "Dl" },
@@ -430,6 +430,7 @@ export default function MedicationsPage() {
               <div className="mb-6">
               <ScheduleForm
                 loadedSlots={loadedSlots}
+                existingSchedules={schedules}
                 dark={dark}
                 ClockPicker={ClockPicker}
                 onSave={async (formData) => {

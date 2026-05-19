@@ -41,4 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Google credentials
-smrlp-496809-99e377456ddc.json
+google-credentials.json

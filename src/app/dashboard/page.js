@@ -4,84 +4,14 @@
 import { useContext, useState, useEffect } from "react";
 import { ThemeContext, SidebarContext } from "@/app/dashboard/layout";
 import { supabase } from "@/lib/supabase"
-import ScheduleForm from "@/components/ScheduleForm";
-import ClockPicker from "@/components/ClockPicker";
 
-const BTN_PRIMARY = {
-  background: "linear-gradient(135deg, #0ea5e9, #0284c7)",
-  boxShadow: "0 4px 16px rgba(14,165,233,0.3)",
-  color: "white",
-  fontWeight: 600,
-  transition: "transform 0.15s ease, box-shadow 0.15s ease",
-};
-
-function PrimaryBtn({ children, onClick, disabled, className = "" }) {
-  return (
-    <button onClick={onClick} disabled={disabled}
-      className={`rounded-2xl text-sm transition-all duration-200 hover:-translate-y-px active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${className}`}
-      style={BTN_PRIMARY}>
-      {children}
-    </button>
-  );
-}
-
-function Card({ children, className = "", dark }) {
-  return (
-    <div className={`rounded-2xl border ${
-      dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm"
-    } ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function Badge({ children, color = "sky", dark }) {
-  const map = {
-    sky:   dark ? "bg-sky-950/60 border-sky-800/40 text-sky-300"      : "bg-sky-50 border-sky-200 text-sky-700",
-    green: dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700",
-    amber: dark ? "bg-amber-950/60 border-amber-800/40 text-amber-400" : "bg-amber-50 border-amber-200 text-amber-700",
-    slate: dark ? "bg-slate-800 border-slate-700 text-slate-400"       : "bg-slate-50 border-slate-200 text-slate-500",
-    red:   dark ? "bg-red-950/60 border-red-800/40 text-red-400"       : "bg-red-50 border-red-200 text-red-700",
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border ${map[color]}`}>
-      {children}
-    </span>
-  );
-}
-
-function Skeleton({ className = "", dark }) {
-  return <div className={`animate-pulse rounded-xl ${dark ? "bg-slate-800" : "bg-slate-100"} ${className}`} />;
-}
-
-function StatsRow({ meds, alerts, dark }) {
-  const total        = meds.length;
-  const taken        = meds.filter(m => m.log_status === "taken" || m.log_status === "dispensed").length;
-  const pending      = total - taken;
-  const activeAlerts = alerts.filter(a => !a.resolved).length;
-
-  const stats = [
-    { value: total > 0 ? `${taken} / ${total}` : "—", label: "Pastilles avui",   badge: pending > 0 ? `${pending} pendents` : "Tot pres ✓",       bColor: pending > 0 ? "sky" : "green" },
-    { value: activeAlerts === 0 ? "Cap" : `${activeAlerts}`, label: "Alertes actives", badge: activeAlerts === 0 ? "Tot bé 🎉" : "Revisar avui", bColor: activeAlerts === 0 ? "green" : "amber" },
-    { value: total > 0 ? `${Math.round((taken / total) * 100)}%` : "—", label: "Adherència avui", badge: taken === total && total > 0 ? "Excel·lent" : "En curs", bColor: taken === total && total > 0 ? "green" : "sky" },
-  ];
-
-  return (
-    <div className="grid grid-cols-3 gap-3 sm:gap-4">
-      {stats.map(({ value, label, badge, bColor }) => (
-        <Card key={label} dark={dark} className="p-4 sm:p-5">
-          <div className={`text-2xl sm:text-3xl font-bold font-jakarta mb-1.5 ${
-            bColor === "sky" ? (dark ? "text-sky-400" : "text-sky-600") :
-            bColor === "green" ? (dark ? "text-green-400" : "text-green-600") :
-            (dark ? "text-amber-400" : "text-amber-600")
-          }`}>{value}</div>
-          <p className={`text-sm mb-2.5 ${dark ? "text-slate-300" : "text-slate-700"}`}>{label}</p>
-          <Badge color={bColor} dark={dark}>{badge}</Badge>
-        </Card>
-      ))}
-    </div>
-  );
-}
+import ScheduleForm from "@/components/medications/ScheduleForm";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import PrimaryBtn from "@/components/ui/PrimaryBtn";
+import Skeleton from "@/components/ui/Skeleton";
+import NoRobotDialog from "@/components/dashboard/NoRobotDialog";
+import StatsRow from "@/components/dashboard/StatsRow";
 
 function StatusCard({ robot, patient, dark }) {
   const signalColor = { excellent: "sky", good: "green", poor: "amber" }[robot?.signal] ?? "slate";
@@ -142,7 +72,7 @@ function DispenseCard({ robot, dark }) {
     <Card dark={dark} className="p-6 flex flex-col items-center text-center justify-between gap-5">
       <div>
         <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl ${dark ? "bg-sky-950/60 border border-sky-800/40" : "bg-sky-50 border border-sky-100"}`}>💊</div>
-        <h3 className={`text-dash font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
+        <h3 className={`text-lg font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`} >Control Manual</h3>
         <p className={`text-sm leading-relaxed max-w-45 mx-auto ${dark ? "text-slate-400" : "text-slate-500"}`}>Dispensa la medicació manualment per a proves o emergències.</p>
       </div>
       {st === "done" ? (
@@ -167,7 +97,7 @@ function MedicationTable({ meds, loading, dark }) {
       {loading ? (
         <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} dark={dark} className="h-10 w-full" />)}</div>
       ) : meds.length === 0 ? (
-        <div className={`flex items-center justify-center min-h-75 text-center text-dash ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
+        <div className={`flex items-center justify-center min-h-75 text-center text-lg ${ dark ? "text-slate-500" : "text-slate-400" }`} > No hi ha medicació programada per avui </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -202,63 +132,6 @@ function MedicationTable({ meds, loading, dark }) {
           </table>
         </div>
       )}
-    </Card>
-  );
-}
-
-function AddMedForm({ patientId, onAdded, dark }) {
-  const [form, setForm] = useState({ name: "", time: "", dose: "" });
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState(null);
-
-  const inputCls = `w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all ${
-    dark
-      ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
-      : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-400/15"
-  }`;
-
-  const handle = async () => {
-    if (!form.name || !form.time || !form.dose) return;
-    setError(null);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("medications").insert({
-      name: form.name, dose: form.dose, scheduled_time: form.time,
-      days: ["dilluns","dimarts","dimecres","dijous","divendres","dissabte","diumenge"],
-      active: true, patient_id: patientId, created_by: user.id,
-    });
-    if (error) { setError(error.message); return; }
-    setSaved(true);
-    setForm({ name: "", time: "", dose: "" });
-    onAdded?.();
-    setTimeout(() => setSaved(false), 2500);
-  };
-
-  return (
-    <Card dark={dark} className="p-6 h-full">
-      <h3 className={`text-base font-bold mb-1 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}>Afegir medicació</h3>
-      <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>Programa una nova pastilla per a l'usuari.</p>
-      <div className="space-y-4">
-        <div>
-          <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Nom del medicament</label>
-          <input type="text" placeholder="Ex: Paracetamol" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={inputCls} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Hora</label>
-            <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} className={inputCls} />
-          </div>
-          <div>
-            <label className={`block text-sm font-medium mb-1.5 ${dark ? "text-slate-300" : "text-slate-600"}`}>Quantitat</label>
-            <input type="text" placeholder="1 pastilla" value={form.dose} onChange={e => setForm({ ...form, dose: e.target.value })} className={inputCls} />
-          </div>
-        </div>
-        {error && <p className={`text-xs px-3 py-2 rounded-xl ${dark ? "bg-red-950/60 text-red-400" : "bg-red-50 text-red-600"}`}>{error}</p>}
-        {saved ? (
-          <div className={`w-full py-3 rounded-2xl text-sm font-semibold text-center border ${dark ? "bg-green-950/60 border-green-800/40 text-green-400" : "bg-green-50 border-green-200 text-green-700"}`}>✓ Medicació afegida!</div>
-        ) : (
-          <PrimaryBtn onClick={handle} className="w-full py-3 px-6">Afegir a la llista</PrimaryBtn>
-        )}
-      </div>
     </Card>
   );
 }
@@ -337,31 +210,6 @@ function NextMedPanel({ meds, dark }) {
   );
 }
 
-// ─── No robot dialog ──────────────────────────────────────────────────────────
-function NoRobotDialog({ dark }) {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className={`max-w-md w-full text-center p-10 rounded-3xl border ${
-        dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm"
-      }`}>
-        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6`}>
-          <img src="/favicon.ico" alt="Care-E" class="w-18 h-18 object-contain"></img></div>
-        <h2 className={`text-xl font-bold mb-2 ${dark ? "text-white" : "text-slate-900"} font-jakarta`}
-          >
-          Cap Care-E connectat
-        </h2>
-        <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          No hem trobat cap Care-E associat al teu compte. Configura el teu robot per començar a monitorar.
-        </p>
-        <div className={`text-xs px-4 py-3 rounded-xl ${
-          dark ? "bg-slate-800 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-100"
-        }`}>
-          Contacta amb el teu proveïdor o afegeix un robot des de la configuració.
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
@@ -564,6 +412,7 @@ export default function DashboardPage() {
             <div className="h-full">
               <ScheduleForm
                 loadedSlots={loadedSlots}
+                existingSchedules={meds}
                 dark={dark}
                 onSave={async (formData) => {
                   await supabase.from("dispense_schedules").insert({
