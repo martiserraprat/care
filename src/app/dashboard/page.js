@@ -377,6 +377,7 @@ export default function DashboardPage() {
   const [retrying, setRetrying] = useState(false);
 
   const [loadedSlots, setLoadedSlots] = useState([]);
+  const [userId, setUserId] = useState(null);
   const handleRetry = async () => {
     setRetrying(true);
     await fetchData();
@@ -389,6 +390,7 @@ export default function DashboardPage() {
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    setUserId(user.id);
 
     const { data: robotData } = await supabase
       .from("robots").select("*").eq("owner_id", user.id).single();
