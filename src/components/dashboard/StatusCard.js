@@ -1,5 +1,7 @@
 "use client";
 
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 
 export default function StatusCard({ robot, patient, dark }) {
   const signalColor = { excellent: "sky", good: "green", poor: "amber" }[robot?.signal] ?? "slate";

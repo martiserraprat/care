@@ -1,7 +1,7 @@
 "use client";
 
-import Card from "../ui/Card";
-import Badge from "../ui/Badge";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 
 export default function StatsRow({ meds, alerts, dark }) {
   const total        = meds.length;
