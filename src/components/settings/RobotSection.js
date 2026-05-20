@@ -27,7 +27,7 @@ export default function RobotSection({ dark }) {
       const { data: pats } = await supabase.from("patients").select("*").in("robot_id", ids);
       const map = {};
       (pats ?? []).forEach(p => { map[p.robot_id] = p; });
-      setPatients(map);
+      setPatients(map)
     }
   };
 
@@ -65,6 +65,10 @@ export default function RobotSection({ dark }) {
       patient_id: patient.id,
       profile_id: user.id,
     });
+
+    // Al handleLink — generes el token
+    const token = crypto.randomUUID();
+    await supabase.from("robots").update({ robot_token: token }).eq("id", form.robotId.trim());
 
     done();
   };
