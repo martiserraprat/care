@@ -1,6 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import path from "path";
 import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export async function POST(req) {
   try {
@@ -104,6 +110,24 @@ Respon ÚNICAMENT amb un objecte JSON vàlid:
         parsed.warnings = [...(parsed.warnings || []), `Paracetamol: dosi màxima per presa és 2 comprimits.`];
       }
       parsed.info = `La dosi de Paracetamol és excessiva. Màxim 2 comprimits per presa.`;
+    }
+
+    // ⭐ NOU: VERIFICACIÓ D'INVENTARI
+    if (newSchedule.slot_inventory_id) {
+      const { data: slot } = await supabaseAdmin
+        .from("slot_inventory")
+        .select("pill_count, slot")
+        .eq("id", newSchedule.slot_inventory_id)
+        .single();
+
+      if (slot && slot.pill_count < doseNum) {
+        parsed.safe = false;
+        parsed.warnings = [
+          ...(parsed.warnings || []),
+          `Inventari insuficient: només hi ha ${slot.pill_count} pastilla/es al slot ${slot.slot}, però la dosi requereix ${doseNum}.`
+        ];
+        parsed.info = `No es pot programar: cal omplir el slot abans. Disponibles: ${slot.pill_count}, requerides: ${doseNum}.`;
+      }
     }
 
     return Response.json(parsed);

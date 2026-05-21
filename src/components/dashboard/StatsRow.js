@@ -5,12 +5,13 @@ import Badge from "@/components/ui/Badge";
 
 export default function StatsRow({ meds, alerts, dark }) {
   const total        = meds.length;
-  const taken        = meds.filter(m => m.log_status === "taken" || m.log_status === "dispensed").length;
-  const pending      = total - taken;
+  const taken = meds.filter(m => m.log_status === "taken" || m.log_status === "dispensed").length;
+  const missed = meds.filter(m => m.log_status === "missed").length;
+  const pending = total - taken - missed;
   const activeAlerts = alerts.filter(a => !a.resolved).length;
 
   const stats = [
-    { value: total > 0 ? `${taken} / ${total}` : "—", label: "Pastilles avui",   badge: pending > 0 ? `${pending} pendents` : "Tot pres ✓",       bColor: pending > 0 ? "sky" : "green" },
+    { value: total > 0 ? `${taken} / ${total}` : "—", label: "Pastilles avui", badge: missed > 0 ? `${missed} perdudes ⚠️`: pending > 0 ? `${pending} pendents` : "Tot pres ✓", bColor: missed > 0 ? "red" : pending > 0 ? "sky" : "green" },
     { value: activeAlerts === 0 ? "Cap" : `${activeAlerts}`, label: "Alertes actives", badge: activeAlerts === 0 ? "Tot bé 🎉" : "Revisar avui", bColor: activeAlerts === 0 ? "green" : "amber" },
     { value: total > 0 ? `${Math.round((taken / total) * 100)}%` : "—", label: "Adherència avui", badge: taken === total && total > 0 ? "Excel·lent" : "En curs", bColor: taken === total && total > 0 ? "green" : "sky" },
   ];

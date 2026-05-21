@@ -6,39 +6,37 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// src/app/api/robot-info/route.js
 export async function POST(req) {
   const { robot_id, robot_token } = await req.json();
 
-    const { data: robot } = await supabaseAdmin
+  const { data: robot } = await supabaseAdmin
     .from("robots")
     .select("id, name, owner_id")
     .eq("id", robot_id)
     .eq("robot_token", robot_token)
     .single();
 
-    if (!robot) return Response.json({ error: "Token invàlid" }, { status: 401 });
+  if (!robot) return Response.json({ error: "Token invàlid" }, { status: 401 });
 
-    const { data: patient } = await supabaseAdmin
+  const { data: patient } = await supabaseAdmin
     .from("patients")
     .select("id")
     .eq("robot_id", robot.id)
     .single();
 
-    let schedules = [];
-    if (patient) {
-    // 3. ARA BUSQUEM ELS HORARIS
+  let schedules = [];
+  if (patient) {
     const { data: schData } = await supabaseAdmin
-        .from("dispense_schedules")
-        .select("*, slot_inventory(slot, medication_name)")
-        .eq("patient_id", patient.id)
-        .eq("active", true);
-    
-    schedules = schData || [];
-    }
+      .from("dispense_schedules")
+      .select("*, slot_inventory(id, slot, medication_name, pill_count)")  // ⭐ afegit id i pill_count
+      .eq("patient_id", patient.id)
+      .eq("active", true);
 
-    return Response.json({ 
+    schedules = schData || [];
+  }
+
+  return Response.json({
     robot_name: robot.name,
-    schedules: schedules
-    });
+    schedules: schedules,
+  });
 }

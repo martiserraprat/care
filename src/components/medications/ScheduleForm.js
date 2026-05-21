@@ -55,19 +55,20 @@ export default function ScheduleForm({
     const selectedSlot = loadedSlots.find(s => s.id === formData.slot_inventory_id);
     if (!selectedSlot) return null;
 
-    const res = await fetch("/api/check-medication", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        newSchedule: {
-          medication_name: selectedSlot.medication_name,
-          dose: formData.dose,
-          time: formData.time,
-          days: formData.days,
-        },
-        existingSchedules,
-      }),
-    });
+  const res = await fetch("/api/check-medication", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      newSchedule: {
+        medication_name: selectedSlot.medication_name,
+        dose: formData.dose,
+        time: formData.time,
+        days: formData.days,
+        slot_inventory_id: selectedSlot.id, 
+      },
+      existingSchedules,
+    }),
+  });
 
     return await res.json();
   };
@@ -244,7 +245,7 @@ export default function ScheduleForm({
               </div>
               <div className={`h-1.5 rounded-full overflow-hidden ${dark ? "bg-sky-900/60" : "bg-sky-100"}`}>
                 <div
-                  className="h-full bg-gradient-to-r from-sky-400 to-sky-500 rounded-full"
+                  className="h-full bg-linear-to-r from-sky-400 to-sky-500 rounded-full"
                   style={{ animation: "check-progress 1.5s ease-in-out infinite" }}
                 />
               </div>

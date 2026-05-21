@@ -9,7 +9,7 @@ export default function Badge({ children, color = "sky", dark }) {
     red:   dark ? "bg-red-950/60 border-red-800/40 text-red-400"       : "bg-red-50 border-red-200 text-red-700",
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border ${map[color]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border whitespace-nowrap ${map[color]}`}>
       {children}
     </span>
   );
