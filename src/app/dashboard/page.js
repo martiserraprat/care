@@ -103,6 +103,7 @@ const { data: medsData, error: medsError } = await supabase
       log_status: log.status,
       error_reason: log.error_reason,
       dose_real: log.dose_real,
+      dispensed_at: log.dispensed_at,
       from_log: true,
     });
     if (log.schedule_id) usedScheduleIds.add(log.schedule_id);
