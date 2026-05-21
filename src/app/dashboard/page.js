@@ -63,29 +63,42 @@ export default function DashboardPage() {
     setLoadedSlots(slotsData || []);
 
     // 1. Schedules ACTIUS programats per avui
-const { data: medsData, error: medsError } = await supabase
-  .from("dispense_schedules")
-  .select("*, slot_inventory(medication_name)")
-  .eq("patient_id", patientData.id)
-  .eq("active", true)
-  .contains("days", [dayName])
-  .order("scheduled_time");
+  const { data: medsData, error: medsError } = await supabase
+    .from("dispense_schedules")
+    .select("*, slot_inventory(medication_name)")
+    .eq("patient_id", patientData.id)
+    .eq("active", true)
+    .contains("days", [dayName])
+    .order("scheduled_time");
 
   if (medsError) console.error("Error meds:", medsError);
 
-  // 2. TOTS els logs d'avui (encara que el schedule s'hagi esborrat)
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-
-  const { data: todayLogs } = await supabase
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+    
+  const { data: rawTodayLogs } = await supabase
     .from("dispense_logs")
     .select("*")
     .eq("robot_id", robotData.id)
     .gte("dispensed_at", todayStart.toISOString())
-    .lte("dispensed_at", todayEnd.toISOString());
+    .lt("dispensed_at", todayEnd.toISOString());
 
+  // Filtrem l'efecte "cron de mitjanit" que ens cola la medicació de la nit anterior
+  const todayLogs = (rawTodayLogs || []).filter(log => {
+    if (log.status === "missed" && log.scheduled_time) {
+      const logDate = new Date(log.dispensed_at);
+      const isMidnight = logDate.getHours() === 0 && logDate.getMinutes() === 0;
+      const isLateNightSchedule = parseInt(log.scheduled_time.split(":")[0]) >= 20; // Programat a les 20h o més tard
+      
+      // Si és un 'missed' programat a la nit però marcat a mitjanit, és d'ahir. El descartem.
+      if (isMidnight && isLateNightSchedule) {
+        return false;
+      }
+    }
+    return true;
+  });
+  
   // 3. Combinem: cada presa només surt UN COP
   const combined = [];
   const usedScheduleIds = new Set();
@@ -195,7 +208,7 @@ const { data: medsData, error: medsError } = await supabase
           </div>
           <div className="grid grid-cols-1 dash:grid-cols-3 gap-5 items-start">
             <div className="dash:col-span-2">
-              <ActivityTimeline logs={logs} loading={false} dark={dark} />
+              <ActivityTimeline logs={logs} loading={false} dark={dark} maxItems={8} />
             </div>
             <NextMedPanel meds={meds} dark={dark} />
           </div>

@@ -14,7 +14,7 @@
         "slot_inventory": {
             "id": "c9a32924-5299-4794-91da-010f079d42be",
             "slot": 1,
-            "pill_count": 27,
+            "pill_count": 25,
             "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
         }
     },
@@ -57,6 +57,63 @@
         }
     },
     {
+        "id": "548a1c54-c1ff-4e89-bc8e-a01a5af1195d",
+        "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
+        "scheduled_time": "08:00:00",
+        "days": [
+            "divendres"
+        ],
+        "dose": 1,
+        "active": true,
+        "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
+        "created_at": "2026-05-21T22:56:38.002004+00:00",
+        "slot_inventory_id": "c9a32924-5299-4794-91da-010f079d42be",
+        "slot_inventory": {
+            "id": "c9a32924-5299-4794-91da-010f079d42be",
+            "slot": 1,
+            "pill_count": 25,
+            "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
+        }
+    },
+    {
+        "id": "dd8f458f-d9b0-43d5-aeb9-e4c11c90054e",
+        "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
+        "scheduled_time": "01:20:00",
+        "days": [
+            "divendres"
+        ],
+        "dose": 1,
+        "active": true,
+        "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
+        "created_at": "2026-05-21T23:15:52.665187+00:00",
+        "slot_inventory_id": "c9a32924-5299-4794-91da-010f079d42be",
+        "slot_inventory": {
+            "id": "c9a32924-5299-4794-91da-010f079d42be",
+            "slot": 1,
+            "pill_count": 25,
+            "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
+        }
+    },
+    {
+        "id": "63102a77-a1c8-4a3b-9825-32bc092c0b6f",
+        "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
+        "scheduled_time": "01:10:00",
+        "days": [
+            "divendres"
+        ],
+        "dose": 1,
+        "active": true,
+        "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
+        "created_at": "2026-05-21T23:16:25.521516+00:00",
+        "slot_inventory_id": "c9a32924-5299-4794-91da-010f079d42be",
+        "slot_inventory": {
+            "id": "c9a32924-5299-4794-91da-010f079d42be",
+            "slot": 1,
+            "pill_count": 25,
+            "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
+        }
+    },
+    {
         "id": "3d563bfd-1e9c-4d68-80e8-53e09b0df225",
         "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
         "scheduled_time": "23:00:00",
@@ -77,7 +134,7 @@
         "slot_inventory": {
             "id": "c9a32924-5299-4794-91da-010f079d42be",
             "slot": 1,
-            "pill_count": 27,
+            "pill_count": 25,
             "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
         }
     },
@@ -92,6 +149,31 @@
         "active": true,
         "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
         "created_at": "2026-05-21T13:41:39.132112+00:00",
+        "slot_inventory_id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
+        "slot_inventory": {
+            "id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
+            "slot": 2,
+            "pill_count": 1,
+            "medication_name": "PARACETAMOL ABAMED 1 G COMPRIMIDOS EFG"
+        }
+    },
+    {
+        "id": "4681969e-1e12-4134-84fb-ea34a17bc3f3",
+        "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
+        "scheduled_time": "13:40:00",
+        "days": [
+            "dilluns",
+            "dimarts",
+            "dimecres",
+            "dijous",
+            "divendres",
+            "dissabte",
+            "diumenge"
+        ],
+        "dose": 2,
+        "active": true,
+        "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
+        "created_at": "2026-05-21T13:38:10.232679+00:00",
         "slot_inventory_id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
         "slot_inventory": {
             "id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
