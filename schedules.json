@@ -14,7 +14,7 @@
         "slot_inventory": {
             "id": "c9a32924-5299-4794-91da-010f079d42be",
             "slot": 1,
-            "pill_count": 29,
+            "pill_count": 27,
             "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
         }
     },
@@ -52,7 +52,7 @@
         "slot_inventory": {
             "id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
             "slot": 2,
-            "pill_count": 4,
+            "pill_count": 1,
             "medication_name": "PARACETAMOL ABAMED 1 G COMPRIMIDOS EFG"
         }
     },
@@ -77,7 +77,7 @@
         "slot_inventory": {
             "id": "c9a32924-5299-4794-91da-010f079d42be",
             "slot": 1,
-            "pill_count": 29,
+            "pill_count": 27,
             "medication_name": "NAPROXENO NORMON 500 mg COMPRIMIDOS EFG"
         }
     },
@@ -96,7 +96,7 @@
         "slot_inventory": {
             "id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
             "slot": 2,
-            "pill_count": 4,
+            "pill_count": 1,
             "medication_name": "PARACETAMOL ABAMED 1 G COMPRIMIDOS EFG"
         }
     }

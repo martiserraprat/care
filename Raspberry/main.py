@@ -57,7 +57,7 @@ def get_wifi_signal():
     except Exception:
         return "excellent"
 
-# ⭐ NOU (B): Funció de motor que retorna pastilles realment dispensades
+# Funció de motor que retorna pastilles realment dispensades
 def activar_motor(slot, dosi_demanada, pastilles_disponibles):
     """
     Activa el motor físic i compta quantes pastilles han caigut realment.
@@ -191,6 +191,7 @@ if pendents_inicials:
 
 # Memòria per no repetir pastilles el mateix dia: {"id_horari": "2026-05-20"}
 historial_dispensat = {}
+last_command_check = 0
 
 print("\nIniciant heartbeat i comprovació d'horaris...")
 
@@ -305,6 +306,60 @@ while True:
                         token,
                         status=status
                     )
+
+# --- D) Comprovació d'ordres manuals (cada 5 segons) ---
+    if now - last_command_check > 5 and token:
+        try:
+            r = requests.post(f"{API_URL}/api/robot-pending-commands", json={
+                "robot_id": ROBOT_ID, "robot_token": token
+            }, timeout=5)
+            
+            if r.status_code == 200:
+                commands = r.json().get("commands", [])
+                
+                for cmd in commands:
+                    if cmd.get("type") == "dispense_manual":
+                        slot_info = cmd.get("slot_inventory", {})
+                        dose_demanada = cmd.get("dose", 1)
+                        slot_num = slot_info.get("slot", "?")
+                        med_name = slot_info.get("medication_name", "Desconegut")
+                        pastilles_disponibles = slot_info.get("pill_count", 0)
+                        
+                        print(f"\n🎮 ORDRE MANUAL REBUDA: {dose_demanada}x {med_name} del Slot {slot_num}")
+                        
+                        # Comprovació d'inventari
+                        if pastilles_disponibles < dose_demanada:
+                            print(f"   ❌ Inventari insuficient ({pastilles_disponibles}/{dose_demanada})")
+                            pastilles_reals = activar_motor(slot_num, pastilles_disponibles, pastilles_disponibles) if pastilles_disponibles > 0 else 0
+                            status = "failed_inventory"
+                        else:
+                            pastilles_reals = activar_motor(slot_num, dose_demanada, pastilles_disponibles)
+                            status = "dispensed" if pastilles_reals == dose_demanada else "failed_inventory"
+                        
+                        # Reportem amb el command_id perquè el servidor pugui tancar la comanda
+                        try:
+                            requests.post(f"{API_URL}/api/robot-action", json={
+                                "robot_id": ROBOT_ID,
+                                "robot_token": token,
+                                "action": "dispense",
+                                "payload": {
+                                    "schedule_id": None,  # és manual, no ve d'un schedule
+                                    "slot_inventory_id": cmd.get("slot_inventory_id"),
+                                    "dose": dose_demanada,
+                                    "dose_real": pastilles_reals,
+                                    "status": status,
+                                    "command_id": cmd.get("id"),  # ⭐ clau per tancar la comanda
+                                    "dispensed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                }
+                            }, timeout=5)
+                            print(f"   ✅ Resultat reportat: {pastilles_reals}/{dose_demanada}")
+                        except Exception as e:
+                            print(f"   ⚠️ Error reportant resultat: {e}")
+                
+                last_command_check = now
+        except Exception as e:
+            # Sense internet, no passa res
+            pass
 
     # --- C) Heartbeat amb senyal dinàmica (cada 10 segons) ---
     current_signal = get_wifi_signal()

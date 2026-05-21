@@ -165,7 +165,7 @@ const { data: medsData, error: medsError } = await supabase
           <StatsRow meds={meds} alerts={alerts} dark={dark} />
           <div className="grid grid-cols-1 dash:grid-cols-3 gap-5">
             <StatusCard robot={robot} patient={patient} dark={dark} />
-            <DispenseCard robot={robot} dark={dark} />
+            <DispenseCard robot={robot} slots={loadedSlots} dark={dark} />
           </div>
           
           <div className="grid grid-cols-1 dash:grid-cols-3 gap-5">

@@ -27,14 +27,14 @@ export async function POST(req) {
       const { 
         schedule_id, 
         slot_inventory_id, 
-        dose,                    // dosi demanada
-        dose_real,               // ⭐ NOU: dosi realment dispensada
-        status: robotStatus,     // ⭐ NOU: status que envia el robot
-        dispensed_at 
+        dose,
+        dose_real,
+        status: robotStatus,
+        dispensed_at,
+        command_id,        // ⭐ NOU
       } = payload;
 
-      // ⭐ NOU: Determinem el status final
-      // Si el robot envia un status, l'usem. Si no, calculem segons dose_real.
+      // Determinem el status final
       const finalDoseReal = dose_real !== undefined ? dose_real : dose;
       const finalStatus = robotStatus || (
         finalDoseReal === 0 ? "failed_inventory" :
@@ -42,44 +42,55 @@ export async function POST(req) {
         "dispensed"
       );
 
-      // A) Carreguem dades del schedule per fer snapshot
-      const { data: schedule, error: schErr } = await supabaseAdmin
-        .from("dispense_schedules")
-        .select(`
-          id,
-          scheduled_time,
-          dose,
-          slot_inventory:slot_inventory_id (
-            medication_name,
-            slot
-          )
-        `)
-        .eq("id", schedule_id)
-        .single();
+      // A) Carreguem dades del schedule per fer snapshot (si existeix)
+      let medication_name = "Desconegut";
+      let scheduled_time = null;
 
-      // No bloquegem si el schedule ja no existeix (pot haver-se esborrat)
-      const medication_name = schedule?.slot_inventory?.medication_name || "Desconegut";
-      const scheduled_time = schedule?.scheduled_time || null;
+      if (schedule_id) {
+        const { data: schedule } = await supabaseAdmin
+          .from("dispense_schedules")
+          .select(`
+            scheduled_time,
+            slot_inventory:slot_inventory_id (medication_name)
+          `)
+          .eq("id", schedule_id)
+          .single();
 
-      // ⭐ NOU: Construïm error_reason si la dispensació no ha estat completa
+        if (schedule) {
+          medication_name = schedule.slot_inventory?.medication_name || "Desconegut";
+          scheduled_time = schedule.scheduled_time || null;
+        }
+      } else if (slot_inventory_id) {
+        // ⭐ Si és manual (no hi ha schedule), agafem el medicament del slot
+        const { data: slot } = await supabaseAdmin
+          .from("slot_inventory")
+          .select("medication_name")
+          .eq("id", slot_inventory_id)
+          .single();
+        if (slot) medication_name = slot.medication_name;
+      }
+
+      // Construïm error_reason si la dispensació no ha estat completa
       let error_reason = null;
       if (finalStatus === "failed_inventory") {
         error_reason = `Dispensació incompleta: demanades ${dose}, dispensades ${finalDoseReal}.`;
+      } else if (command_id) {
+        error_reason = "Dispensació manual des del dashboard";
       }
 
-      // B) Creem el log AMB SNAPSHOT (sobreviu si s'esborra el schedule)
+      // B) Creem el log AMB SNAPSHOT
       const { error: logError } = await supabaseAdmin
         .from("dispense_logs")
         .insert({
           schedule_id,
           robot_id,
-          status: finalStatus,                                    // ⭐ pot ser dispensed o failed_inventory
+          status: finalStatus,
           medication_name,
-          dose,                                                    // dosi demanada (snapshot)
-          dose_real: finalDoseReal,                                // ⭐ NOU: dosi real
+          dose,
+          dose_real: finalDoseReal,
           scheduled_time,
           dispensed_at: dispensed_at || new Date().toISOString(),
-          error_reason,                                            // ⭐ NOU
+          error_reason,
         });
 
       if (logError) {
@@ -90,7 +101,7 @@ export async function POST(req) {
         );
       }
 
-      // C) ⭐ Restem només la dosi REALMENT dispensada (no la demanada)
+      // C) Restem només la dosi REALMENT dispensada
       if (slot_inventory_id && finalDoseReal > 0) {
         const { error: rpcError } = await supabaseAdmin.rpc("decrement_pill_count", {
           slot_id: slot_inventory_id,
@@ -99,13 +110,11 @@ export async function POST(req) {
 
         if (rpcError) {
           console.error("⚠️ Error restant inventari:", rpcError);
-          // No fem fail: el log ja està guardat
         }
       }
 
-      // D) ⭐ NOU: Si ha estat failed_inventory, creem alerta
+      // D) Si ha estat failed_inventory, creem alerta
       if (finalStatus === "failed_inventory") {
-        // Recuperem l'id del log que acabem de crear
         const { data: newLog } = await supabaseAdmin
           .from("dispense_logs")
           .select("id")
@@ -116,12 +125,35 @@ export async function POST(req) {
 
         await supabaseAdmin.from("alerts").insert({
           robot_id,
-          type: "medication_failed_inventory",  // tipus específic
+          type: "medication_failed_inventory",
           severity: "high",
           medication_name,
           dispense_log_id: newLog?.id,
           description: `${medication_name}: dispensació incompleta (${finalDoseReal}/${dose} pastilles). Cal omplir el slot.`,
         });
+      }
+
+      // ⭐ E) NOU: Si ve d'una comanda manual, l'actualitzem
+      if (command_id) {
+        console.log("🔄 Actualitzant comanda manual:", command_id);
+        
+        const { error: cmdError } = await supabaseAdmin
+          .from("manual_commands")
+          .update({
+            status: finalStatus === "dispensed" ? "completed" : "failed",
+            result_dose_real: finalDoseReal,
+            result_message: finalStatus === "dispensed" 
+              ? `Dispensades ${finalDoseReal} pastilla/es de ${medication_name}.`
+              : `Dispensació incompleta: només ${finalDoseReal}/${dose} pastilles de ${medication_name}.`,
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", command_id);
+        
+        if (cmdError) {
+          console.error("❌ Error actualitzant manual_commands:", cmdError);
+        } else {
+          console.log("✅ Comanda manual marcada com a", finalStatus === "dispensed" ? "completed" : "failed");
+        }
       }
 
       return Response.json({ 
