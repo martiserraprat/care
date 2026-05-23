@@ -3,11 +3,31 @@ import time
 import datetime
 import json
 import os
+import threading
 import requests
+import speech_recognition as sr
 from config import supabase, ROBOT_ID, API_URL, LOCAL_FILE, DIES_CAT
 from dispensing import processar_schedule
-from commands import processar_comandes
+from commands import processar_comandes, gestionar_veu
 from utils import get_wifi_signal, flush_pendents, carregar_pendents
+
+WAKE_WORDS = [
+    # Català
+    "care", "care-e", "cari", "cares", "carey",
+    "kare", "kari", "kares",
+    # Castellà  
+    "cari", "cariño", "caris", 'queri',
+    # Anglès
+    "kerry", "carry", "cary", "carrie", "eric", "què dir", 'què di',
+    # Fragments
+    "ker", "kar", "car", "are",
+    # Soroll / errors comuns de Google
+    "alí", "alé", "ali", "ale",
+    "caro", "cara", "dare", "bare", "fare", "rare",
+    "quer", "kel", "ker", "key",
+    # Amb accent
+    "carée", "caré", "karé",
+]
 
 # ─── Funcions de sincronització local ────────────────────────────────────────
 
@@ -28,6 +48,56 @@ def load_schedules_local():
         except Exception as e:
             print(f"⚠️ Error llegint fitxer local: {e}")
     return []
+
+# ─── Wake Word ────────────────────────────────────────────────────────────────
+
+# Variable compartida entre threads
+wake_word_activat = threading.Event()
+robot_parlant = threading.Event()
+pausar_wake_word = threading.Event()
+
+def escoltar_wake_word():
+    recognizer = sr.Recognizer()
+    recognizer.energy_threshold = 300
+    recognizer.dynamic_energy_threshold = True
+    recognizer.pause_threshold = 0.8
+    
+    print("🎤 Wake word actiu. Di 'Care-E' per activar.")
+    
+    while True:
+        # ⭐ Esperar si el robot està gravant o parlant
+        if robot_parlant.is_set() or pausar_wake_word.is_set():
+            time.sleep(0.5)
+            continue
+            
+        try:
+            with sr.Microphone(sample_rate=16000) as source:
+                recognizer.adjust_for_ambient_noise(source, duration=0.2)
+                audio = recognizer.listen(source, timeout=3, phrase_time_limit=3)
+            
+            # ⭐ Comprovar de nou per si ha canviat mentre escoltava
+            if pausar_wake_word.is_set():
+                continue
+                
+            try:
+                text = recognizer.recognize_google(audio, language="ca-ES").lower()
+                print(f"   👂 Detectat: '{text}'")
+                
+                if any(w in text for w in WAKE_WORDS):
+                    print("✅ Wake word detectat!")
+                    wake_word_activat.set()
+                    
+            except sr.UnknownValueError:
+                pass
+            except sr.RequestError as e:
+                print(f"⚠️ Error: {e}")
+                time.sleep(2)
+                
+        except sr.WaitTimeoutError:
+            pass
+        except Exception as e:
+            print(f"⚠️ Error wake word: {e}")
+            time.sleep(1)
 
 # ─── Inicialització ───────────────────────────────────────────────────────────
 
@@ -56,6 +126,13 @@ historial_dispensat = {}
 pendents_inicials = carregar_pendents()
 if pendents_inicials:
     print(f"📦 {len(pendents_inicials)} logs pendents de l'última sessió.")
+
+# ─── Iniciar thread de wake word ─────────────────────────────────────────────
+wake_thread = threading.Thread(
+    target=escoltar_wake_word,
+    daemon=True  # s'atura quan s'atura el programa principal
+)
+wake_thread.start()
 
 print("\nIniciant bucle principal...\n")
 
@@ -116,7 +193,20 @@ while True:
         except Exception:
             pass
 
-    # ── D) Heartbeat (cada 10s) ─────────────────────────────────────────────
+    # ── D) ⭐ Comprovar wake word activat ───────────────────────────────────
+    if wake_word_activat.is_set() and token:
+        wake_word_activat.clear()
+        pausar_wake_word.set()  # ← BLOQUEJAR JA AQUÍ
+        print("\n🎤 Processant veu del pacient...")
+        try:
+            gestionar_veu(token, pausar_wake_word, robot_parlant)
+        except Exception as e:
+            import traceback
+            print(f"❌ Error: {traceback.format_exc()}")
+        finally:
+            pausar_wake_word.clear()  # ← assegurar reactivació
+
+    # ── E) Heartbeat (cada 10s) ─────────────────────────────────────────────
     try:
         supabase.table("robots").update({
             "status":  "online",

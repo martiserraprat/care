@@ -85,25 +85,21 @@ export function useChatData() {
     // Nos suscribimos a los cambios en la tabla original de mensajes
     // NOTA: Reemplaza "voice_messages" por el nombre real de tu tabla si es diferente.
     const channel = supabase
-      .channel('chat_updates')
-      .on(
+        .channel('chat_updates')
+        .on(
         'postgres_changes',
-        { 
-          event: '*',
-          schema: 'public', 
-          table: 'voice_messages' 
-        },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
+        { event: '*', schema: 'public', table: 'voice_messages' },
+        () => fetchData()
+        )
+        .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'manual_commands' },
+        () => fetchData()  // ⭐ quan el robot marca completed/failed
+        )
+        .subscribe();
 
-    // Limpiamos la suscripción cuando el usuario sale de la página
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchData]);
+    return () => supabase.removeChannel(channel);
+    }, [fetchData]);
 
   // 3. Marcar como leídos
   useEffect(() => {

@@ -1,6 +1,8 @@
 // src/app/api/robot-voice/route.js
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import path from "path";
+import fs from "fs";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,6 +16,15 @@ export async function POST(req) {
     const audioFile = formData.get("audio");
     const robotId = formData.get("robot_id");
     const robotToken = formData.get("robot_token");
+    
+    const now = new Date().toLocaleString("ca-ES", { 
+      timeZone: "Europe/Madrid",
+      weekday: "long",
+      day: "numeric", 
+      month: "long",
+      hour: "2-digit", 
+      minute: "2-digit" 
+    });
 
     // 1. Validar token
     const { data: robot } = await supabaseAdmin
@@ -55,7 +66,7 @@ export async function POST(req) {
 
     const prompt = `Ets l'assistent del robot Care-E, dissenyat per a pacients grans. 
 T'arribarà un àudio del pacient. Has de:
-
+La data i hora ACTUAL és: ${now}
 1. TRANSCRIURE el que diu el pacient (en català, castellà o l'idioma que detectis).
 
 2. CLASSIFICAR la INTENCIÓ:
@@ -103,8 +114,20 @@ Respon ÚNICAMENT amb JSON vàlid:
 
     const parsed = JSON.parse(response.text);
 
-    // 5. Guardar a la BD
-    const { data: voiceMessage } = await supabaseAdmin
+  // 5. Guardar a la BD NOMÉS si és per al cuidador
+
+  if (!parsed.transcript || parsed.transcript.trim().length === 0) {
+    return Response.json({
+      success: true,
+      intent: "unclear",
+      transcript: "",
+      response_text: "No t'he entès bé, pots repetir-ho?",
+    });
+  }
+
+  let voiceMessage = null;
+  if (parsed.intent === "caregiver") {
+    const { data } = await supabaseAdmin
       .from("voice_messages")
       .insert({
         robot_id: robotId,
@@ -116,16 +139,19 @@ Respon ÚNICAMENT amb JSON vàlid:
       })
       .select()
       .single();
+    voiceMessage = data;
+  }
 
-    // 6. Si és per al cuidador i és urgent, crear alerta
-    if (parsed.intent === "caregiver" && ["high", "emergency"].includes(parsed.urgency)) {
-      await supabaseAdmin.from("alerts").insert({
-        robot_id: robotId,
-        type: "fall",  // o un nou tipus 'voice_message'
-        severity: parsed.urgency === "emergency" ? "high" : "medium",
-        description: `Missatge del pacient: "${parsed.transcript}"`,
-      });
-    }
+  // 6. Alerta només si és caregiver urgent
+  if (parsed.intent === "caregiver" && ["high", "emergency"].includes(parsed.urgency)) {
+    await supabaseAdmin.from("alerts").insert({
+      robot_id: robotId,
+      type: "voice_message",
+      severity: parsed.urgency === "emergency" ? "high" : "medium",
+      description: `Missatge del pacient: "${parsed.transcript}"`,
+      medication_name: null,
+    });
+}
 
     // 7. Retornar al robot què fer
     return Response.json({
