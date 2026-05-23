@@ -5,6 +5,7 @@ export const ALERT_DOT = {
   low_battery: "bg-yellow-500",
   offline: "bg-slate-400",
   low_inventory: "bg-orange-400",
+  voice_message: "bg-purple-500",
 };
 
 export const ALERT_COLOR = {
@@ -14,6 +15,7 @@ export const ALERT_COLOR = {
   low_battery: "amber",
   offline: "slate",
   low_inventory: "amber",
+  voice_message: "sky",
 };
 
 export const ALERT_LABEL = {
@@ -23,6 +25,7 @@ export const ALERT_LABEL = {
   low_battery: "🔋 Bateria baixa",
   offline: "📡 Desconnectat",
   low_inventory: "📉 Inventari baix",
+  voice_message: "💬 Missatge",
 };
 
 const DEFAULT_DESCRIPTIONS = {
@@ -30,6 +33,7 @@ const DEFAULT_DESCRIPTIONS = {
   low_battery: "La bateria del robot està baixa",
   offline: "El robot ha perdut la connexió",
   low_inventory: "Un slot té poques pastilles restants",
+  voice_message: "El pacient ha enviat un missatge",
 };
 
 export function buildAlertDescription(a) {

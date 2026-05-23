@@ -63,100 +63,92 @@ export default function DashboardPage() {
     setLoadedSlots(slotsData || []);
 
     // 1. Schedules ACTIUS programats per avui
-  const { data: medsData, error: medsError } = await supabase
-    .from("dispense_schedules")
-    .select("*, slot_inventory(medication_name)")
-    .eq("patient_id", patientData.id)
-    .eq("active", true)
-    .contains("days", [dayName])
-    .order("scheduled_time");
+    const { data: medsData, error: medsError } = await supabase
+      .from("dispense_schedules")
+      .select("*, slot_inventory(medication_name)")
+      .eq("patient_id", patientData.id)
+      .eq("active", true)
+      .contains("days", [dayName])
+      .order("scheduled_time");
 
-  if (medsError) console.error("Error meds:", medsError);
+    if (medsError) console.error("Error meds:", medsError);
 
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-    
-  const { data: rawTodayLogs } = await supabase
-    .from("dispense_logs")
-    .select("*")
-    .eq("robot_id", robotData.id)
-    .gte("dispensed_at", todayStart.toISOString())
-    .lt("dispensed_at", todayEnd.toISOString());
+    // 2. ⭐ Logs d'avui filtrats per scheduled_date (hora de Madrid)
+    const todayMadrid = new Date().toLocaleDateString("sv-SE", { 
+      timeZone: "Europe/Madrid" 
+    });
 
-  // Filtrem l'efecte "cron de mitjanit" que ens cola la medicació de la nit anterior
-  const todayLogs = (rawTodayLogs || []).filter(log => {
-    if (log.status === "missed" && log.scheduled_time) {
-      const logDate = new Date(log.dispensed_at);
-      const isMidnight = logDate.getHours() === 0 && logDate.getMinutes() === 0;
-      const isLateNightSchedule = parseInt(log.scheduled_time.split(":")[0]) >= 20; // Programat a les 20h o més tard
-      
-      // Si és un 'missed' programat a la nit però marcat a mitjanit, és d'ahir. El descartem.
-      if (isMidnight && isLateNightSchedule) {
-        return false;
+    const { data: todayLogs } = await supabase
+      .from("dispense_logs")
+      .select("*")
+      .eq("robot_id", robotData.id)
+      .eq("scheduled_date", todayMadrid);
+
+    // 3. Combinem: cada presa només surt UN COP
+    const combined = [];
+    const usedScheduleIds = new Set();
+
+    // 3a. Primer els LOGS (sobreviuen encara que s'esborri el schedule)
+    for (const log of todayLogs ?? []) {
+      combined.push({
+        id: `log-${log.id}`,
+        schedule_id: log.schedule_id,
+        scheduled_time: log.scheduled_time || "—",
+        dose: log.dose,
+        slot_inventory: { 
+          medication_name: log.medication_name || "Medicament desconegut" 
+        },
+        log_status: log.status,
+        error_reason: log.error_reason,
+        dose_real: log.dose_real,
+        dispensed_at: log.dispensed_at,
+        from_log: true,
+      });
+      if (log.schedule_id) usedScheduleIds.add(log.schedule_id);
+    }
+
+    // 3b. Schedules d'avui que ENCARA NO tenen log
+    for (const m of medsData ?? []) {
+      if (!usedScheduleIds.has(m.id)) {
+        combined.push({
+          ...m,
+          log_status: "pending",
+          from_log: false,
+        });
       }
     }
-    return true;
-  });
-  
-  // 3. Combinem: cada presa només surt UN COP
-  const combined = [];
-  const usedScheduleIds = new Set();
 
-  // 3a. Primer afegim els LOGS (sobreviuen encara que s'esborri el schedule)
-  for (const log of todayLogs ?? []) {
-    combined.push({
-      id: `log-${log.id}`,
-      schedule_id: log.schedule_id,
-      scheduled_time: log.scheduled_time || "—",
-      dose: log.dose,
-      slot_inventory: { 
-        medication_name: log.medication_name || "Medicament desconegut" 
-      },
-      log_status: log.status,
-      error_reason: log.error_reason,
-      dose_real: log.dose_real,
-      dispensed_at: log.dispensed_at,
-      from_log: true,
-    });
-    if (log.schedule_id) usedScheduleIds.add(log.schedule_id);
-  }
+    // 4. Ordenem per hora
+    combined.sort((a, b) => 
+      (a.scheduled_time || "").localeCompare(b.scheduled_time || "")
+    );
 
-  // 3b. Després afegim els SCHEDULES d'avui que ENCARA NO tenen log
-  for (const m of medsData ?? []) {
-    if (!usedScheduleIds.has(m.id)) {
-      combined.push({
-        ...m,
-        log_status: "pending",
-        from_log: false,
-      });
-    }
-  }
+    setMeds(combined);
 
-  // 4. Ordenem per hora
-  combined.sort((a, b) => 
-    (a.scheduled_time || "").localeCompare(b.scheduled_time || "")
-  );
+    // 5. Alertes recents per al timeline (amb join al log)
+    const { data: alertsRecent } = await supabase
+      .from("alerts")
+      .select(`
+        *,
+        dispense_log:dispense_log_id (
+          scheduled_time,
+          dose,
+          dose_real,
+          error_reason,
+          status
+        )
+      `)
+      .eq("robot_id", robotData.id)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    setLogs(alertsRecent ?? []);
 
-  setMeds(combined);
-  const { data: alertsRecent } = await supabase
-    .from("alerts")
-    .select(`
-      *,
-      dispense_log:dispense_log_id (
-        scheduled_time,
-        dose,
-        dose_real,
-        error_reason,
-        status
-      )
-    `)
-    .eq("robot_id", robotData.id)
-    .order("created_at", { ascending: false })
-    .limit(8);
-  setLogs(alertsRecent ?? []);
-
-    const { data: alertsData } = await supabase.from("alerts").select("*").eq("robot_id", robotData.id).order("created_at", { ascending: false });
+    // 6. Totes les alertes per a StatsRow
+    const { data: alertsData } = await supabase
+      .from("alerts")
+      .select("*")
+      .eq("robot_id", robotData.id)
+      .order("created_at", { ascending: false });
     setAlerts(alertsData ?? []);
 
     setLoading(false);

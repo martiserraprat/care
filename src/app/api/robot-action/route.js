@@ -22,7 +22,9 @@ export async function POST(req) {
       return Response.json({ error: "Token invàlid" }, { status: 401 });
     }
 
-    // 2. Acció: dispense
+    // ══════════════════════════════════════════
+    // ACCIÓ: DISPENSE
+    // ══════════════════════════════════════════
     if (action === "dispense") {
       const { 
         schedule_id, 
@@ -31,10 +33,9 @@ export async function POST(req) {
         dose_real,
         status: robotStatus,
         dispensed_at,
-        command_id,        // ⭐ NOU
+        command_id,
       } = payload;
 
-      // Determinem el status final
       const finalDoseReal = dose_real !== undefined ? dose_real : dose;
       const finalStatus = robotStatus || (
         finalDoseReal === 0 ? "failed_inventory" :
@@ -42,17 +43,13 @@ export async function POST(req) {
         "dispensed"
       );
 
-      // A) Carreguem dades del schedule per fer snapshot (si existeix)
       let medication_name = "Desconegut";
       let scheduled_time = null;
 
       if (schedule_id) {
         const { data: schedule } = await supabaseAdmin
           .from("dispense_schedules")
-          .select(`
-            scheduled_time,
-            slot_inventory:slot_inventory_id (medication_name)
-          `)
+          .select(`scheduled_time, slot_inventory:slot_inventory_id (medication_name)`)
           .eq("id", schedule_id)
           .single();
 
@@ -61,7 +58,6 @@ export async function POST(req) {
           scheduled_time = schedule.scheduled_time || null;
         }
       } else if (slot_inventory_id) {
-        // ⭐ Si és manual (no hi ha schedule), agafem el medicament del slot
         const { data: slot } = await supabaseAdmin
           .from("slot_inventory")
           .select("medication_name")
@@ -70,7 +66,6 @@ export async function POST(req) {
         if (slot) medication_name = slot.medication_name;
       }
 
-      // Construïm error_reason si la dispensació no ha estat completa
       let error_reason = null;
       if (finalStatus === "failed_inventory") {
         error_reason = `Dispensació incompleta: demanades ${dose}, dispensades ${finalDoseReal}.`;
@@ -78,7 +73,10 @@ export async function POST(req) {
         error_reason = "Dispensació manual des del dashboard";
       }
 
-      // B) Creem el log AMB SNAPSHOT
+      const scheduledDate = new Date().toLocaleDateString("sv-SE", { 
+        timeZone: "Europe/Madrid" 
+      });
+      
       const { error: logError } = await supabaseAdmin
         .from("dispense_logs")
         .insert({
@@ -89,6 +87,7 @@ export async function POST(req) {
           dose,
           dose_real: finalDoseReal,
           scheduled_time,
+          scheduled_date: scheduledDate,
           dispensed_at: dispensed_at || new Date().toISOString(),
           error_reason,
         });
@@ -101,19 +100,14 @@ export async function POST(req) {
         );
       }
 
-      // C) Restem només la dosi REALMENT dispensada
       if (slot_inventory_id && finalDoseReal > 0) {
         const { error: rpcError } = await supabaseAdmin.rpc("decrement_pill_count", {
           slot_id: slot_inventory_id,
           amount: finalDoseReal,
         });
-
-        if (rpcError) {
-          console.error("⚠️ Error restant inventari:", rpcError);
-        }
+        if (rpcError) console.error("⚠️ Error restant inventari:", rpcError);
       }
 
-      // D) Si ha estat failed_inventory, creem alerta
       if (finalStatus === "failed_inventory") {
         const { data: newLog } = await supabaseAdmin
           .from("dispense_logs")
@@ -133,10 +127,7 @@ export async function POST(req) {
         });
       }
 
-      // ⭐ E) NOU: Si ve d'una comanda manual, l'actualitzem
       if (command_id) {
-        console.log("🔄 Actualitzant comanda manual:", command_id);
-        
         const { error: cmdError } = await supabaseAdmin
           .from("manual_commands")
           .update({
@@ -148,12 +139,8 @@ export async function POST(req) {
             completed_at: new Date().toISOString(),
           })
           .eq("id", command_id);
-        
-        if (cmdError) {
-          console.error("❌ Error actualitzant manual_commands:", cmdError);
-        } else {
-          console.log("✅ Comanda manual marcada com a", finalStatus === "dispensed" ? "completed" : "failed");
-        }
+
+        if (cmdError) console.error("❌ Error actualitzant manual_commands:", cmdError);
       }
 
       return Response.json({ 
@@ -163,7 +150,40 @@ export async function POST(req) {
       });
     }
 
+    // ══════════════════════════════════════════
+    // ACCIÓ: SPEAK  ← ara està FORA del dispense
+    // ══════════════════════════════════════════
+    if (action === "speak") {
+      const { command_id, status: robotStatus, error_message } = payload;
+
+      if (!command_id) {
+        return Response.json({ error: "Falta command_id" }, { status: 400 });
+      }
+
+      const { error: cmdError } = await supabaseAdmin
+        .from("manual_commands")
+        .update({
+          status: robotStatus === "ok" ? "completed" : "failed",
+          result_message: robotStatus === "ok"
+            ? "Missatge reproduït correctament"
+            : `Error: ${error_message || "desconegut"}`,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", command_id);
+
+      if (cmdError) {
+        console.error("❌ Error actualitzant speak:", cmdError);
+        return Response.json({ error: cmdError.message }, { status: 500 });
+      }
+
+      return Response.json({ success: true });
+    }
+
+    // ══════════════════════════════════════════
+    // ACCIÓ DESCONEGUDA
+    // ══════════════════════════════════════════
     return Response.json({ error: "Acció desconeguda" }, { status: 400 });
+
   } catch (error) {
     console.error("❌ Error general:", error);
     return Response.json(

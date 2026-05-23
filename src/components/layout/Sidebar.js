@@ -14,6 +14,7 @@ const navItems = [
   { href: "/dashboard",             icon: "⊞",  label: "Dashboard" },
   { href: "/dashboard/medications",           icon: "💊", label: "Medicació" },
   { href: "/dashboard/alerts",    icon: "🔔", label: "Alertes" },
+  { href: "/dashboard/messages",    icon: "✉", label: "Missatges" },
   // { href: "/dashboard/robot",       icon: "🤖", label: "Control Robot" },
   // { href: "/dashboard/reports",     icon: "📊", label: "Informes" },
   { href: "/dashboard/settings",    icon: "⚙️", label: "Configuració" },

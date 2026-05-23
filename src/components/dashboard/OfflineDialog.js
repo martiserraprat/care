@@ -14,7 +14,7 @@ export default function OfflineDialog({ dark, robot, handleRetry, retrying }) {
           Robot offline
         </h2>
         <p className={`text-sm leading-relaxed mb-6 ${dark ? "text-slate-400" : "text-slate-500"}`}>
-          No es pot mostrar informació en directe. El robot <span className={`font-semibold ${dark ? "text-white" : "text-slate-800"}`}>{robot?.name}</span> no està responent.
+          No es pot mostrar informació en directe. El <span className={`font-semibold ${dark ? "text-white" : "text-slate-800"}`}>CARE-E</span> no està responent.
         </p>
         <div className={`text-xs px-4 py-3 rounded-xl mb-4 ${
           dark ? "bg-slate-800 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-100"

@@ -27,6 +27,8 @@ export async function POST(req) {
       type,
       dose,
       slot_inventory_id,
+      message_text,
+      audio_base64,
       slot_inventory:slot_inventory_id (
         slot,
         medication_name,
