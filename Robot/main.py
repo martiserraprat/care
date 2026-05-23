@@ -114,6 +114,7 @@ current_schedules = load_schedules_local()
 last_sync_time = 0
 last_command_check = 0
 historial_dispensat = {}
+last_heartbeat = 0
 
 pendents_inicials = carregar_pendents()
 if pendents_inicials:
@@ -204,16 +205,19 @@ while True:
             pausar_wake_word.clear()
 
     # ── E) Heartbeat (cada 10s) ─────────────────────────────────────────────
-    try:
-        supabase.table("robots").update({
-            "status":  "online",
-            "battery": None,
-            "signal":  get_wifi_signal(),
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        }).eq("id", ROBOT_ID).execute()
+    if now - last_heartbeat > 10:
+        try:
+            supabase.table("robots").update({
+                "status":  "online",
+                "battery": None,
+                "signal":  get_wifi_signal(),
+                "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }).eq("id", ROBOT_ID).execute()
 
-        print(f"Ping ✓ | {time.strftime('%H:%M:%S')}")
-    except Exception:
-        pass
+            print(f"Ping ✓ | {time.strftime('%H:%M:%S')}")
+        except Exception:
+            pass
+        
+        last_heartbeat = now # Actualitzem el comptador
 
-    time.sleep(10)
+    time.sleep(0.1)
