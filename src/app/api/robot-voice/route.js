@@ -49,6 +49,14 @@ export async function POST(req) {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBase64 = Buffer.from(audioBuffer).toString("base64");
 
+    if (!audioBase64 || audioBase64.length < 100) {
+      return Response.json({
+        success: true,
+        intent: "unclear",
+        transcript: "",
+        response_text: "Hola! M'has cridat? Recorda parlar després d'activar-me.",
+      });
+    }
     // 4. Cridem Gemini amb àudio
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     const ai = new GoogleGenAI({
@@ -64,34 +72,37 @@ export async function POST(req) {
       },
     });
 
-    const prompt = `Ets l'assistent del robot Care-E, dissenyat per a pacients grans. 
-T'arribarà un àudio del pacient. Has de:
-La data i hora ACTUAL és: ${now}
-1. TRANSCRIURE el que diu el pacient (en català, castellà o l'idioma que detectis).
+  const prompt = `Ets l'assistent intel·ligent del robot Care-E, dissenyat per acompanyar pacients grans i ajudar els seus cuidadors. 
+    T'arribarà un àudio del pacient. Has de fer el següent:
+    La data i hora ACTUAL és: ${now}
 
-2. CLASSIFICAR la INTENCIÓ:
-   - "caregiver": el pacient parla AL CUIDADOR/FAMÍLIA (ex: "digues al meu fill que vingui", "necessito ajuda", "no em trobo bé", "vine a casa", emergències).
-   - "robot": el pacient parla AMB EL ROBOT directament (ex: "quina hora és?", "com et dius?", "explica'm un acudit", "quins medicaments toquen avui?").
-   - "unclear": no s'entén o és ambigu.
+    1. TRANSCRIURE: Fes una transcripció literal del que sents a "raw_transcript".
+    2. REESCRIURE EL MISSATGE PER AL CUIDADOR ("clean_message"): 
+       - Ignora sorolls, errors i quequejos.
+       - Redacta un missatge professional, empàtic i complet en TERCERA PERSONA que resumeixi perfectament què vol el pacient.
+       - 🧠 AFEGIT DE VALOR: Si el pacient fa una pregunta objectiva sobre medicació (ex: dosis, freqüència), salut, o fets coneguts, AFEGEIX al final del text una "[Nota de l'Assistent]" amb la informació general recomanada per ajudar el cuidador a respondre ràpidament.
+       - Exemple: "El pacient demana saber quants paracetamols pot prendre com a màxim al dia. \\n\\n[Nota de l'Assistent: La dosi recomanada per a adults no ha de superar els 4 grams al dia, generalment prenent 1 gram cada 8 hores. Cal revisar la seva pauta mèdica específica.]"
+    3. CLASSIFICAR la INTENCIÓ ("intent"):
+       - "caregiver": el pacient demana enviar un missatge, fer una pregunta al cuidador o demana ajuda.
+       - "robot": el pacient busca interacció directa amb la IA (ex: "quina hora és?", "quin temps fa?").
+       - "unclear": no s'entén absolutament res.
+    4. URGÈNCIA ("urgency", només si és "caregiver"):
+       - "emergency": dolor intens, caiguda, sang, mareig fort.
+       - "high": preocupació, malestar moderat, dubtes urgents de medicació.
+       - "normal": comentaris o dubtes genèrics sense perill.
+       - "low": salutacions o informació rutinària.
+    5. RESPOSTA PEL ROBOT ("robot_response"): 
+       - Si la intenció és "robot", respon al pacient de forma empàtica i útil.
+       - Si la intenció és "caregiver", confirma l'enviament amb una frase com: "Molt bé, acabo d'enviar aquesta pregunta al teu cuidador perquè t'ho revisi."
 
-3. URGÈNCIA (només si és "caregiver"):
-   - "emergency": dolor, caiguda, sang, mareig fort, dificultat respiratòria.
-   - "high": preocupació, demanen ajuda no urgent.
-   - "normal": missatge informatiu sense urgència.
-   - "low": comentaris quotidians.
-
-4. Si la intenció és "robot", genera una RESPOSTA empàtica, breu (màxim 2 frases), en català.
-   - Tracta el pacient amb respecte i amabilitat.
-   - Si demana medicació, indica que ho ha de mirar el cuidador.
-   - Si demana ajuda mèdica, redirigeix al cuidador.
-
-Respon ÚNICAMENT amb JSON vàlid:
-{
-  "transcript": "...",
-  "intent": "caregiver" | "robot" | "unclear",
-  "urgency": "low" | "normal" | "high" | "emergency",
-  "robot_response": "..." (només si intent és "robot", sinó null)
-}`;
+    Respon ÚNICAMENT amb JSON vàlid:
+    {
+      "raw_transcript": "...",
+      "clean_message": "...",
+      "intent": "caregiver" | "robot" | "unclear",
+      "urgency": "low" | "normal" | "high" | "emergency",
+      "robot_response": "..."
+    }`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -112,18 +123,16 @@ Respon ÚNICAMENT amb JSON vàlid:
       }
     });
 
-    const parsed = JSON.parse(response.text);
+  const parsed = JSON.parse(response.text);
 
-  // 5. Guardar a la BD NOMÉS si és per al cuidador
-
-  if (!parsed.transcript || parsed.transcript.trim().length === 0) {
-    return Response.json({
-      success: true,
-      intent: "unclear",
-      transcript: "",
-      response_text: "No t'he entès bé, pots repetir-ho?",
-    });
-  }
+  if (!parsed.clean_message || parsed.clean_message.trim().length === 0) {
+      return Response.json({
+        success: true,
+        intent: "unclear",
+        transcript: parsed.raw_transcript,
+        response_text: "No t'he entès bé, pots repetir-ho?",
+      });
+    }
 
   let voiceMessage = null;
   if (parsed.intent === "caregiver") {
@@ -132,7 +141,7 @@ Respon ÚNICAMENT amb JSON vàlid:
       .insert({
         robot_id: robotId,
         patient_id: patient?.id,
-        transcript: parsed.transcript,
+        transcript: parsed.clean_message, // <-- AQUÍ GUARDAMOS EL MENSAJE LIMPIO
         intent: parsed.intent,
         urgency: parsed.urgency || "normal",
         robot_response: parsed.robot_response,
@@ -148,10 +157,10 @@ Respon ÚNICAMENT amb JSON vàlid:
       robot_id: robotId,
       type: "voice_message",
       severity: parsed.urgency === "emergency" ? "high" : "medium",
-      description: `Missatge del pacient: "${parsed.transcript}"`,
+      description: `Missatge del pacient: "${parsed.clean_message}"`, // <-- A LA ALERTA TAMBIÉN VA LIMPIO
       medication_name: null,
     });
-}
+  }
 
     // 7. Retornar al robot què fer
     return Response.json({

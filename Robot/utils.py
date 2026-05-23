@@ -104,15 +104,11 @@ def reproduir_audio_base64(audio_b64):
         print(f"⚠️ Error: {traceback.format_exc()}")
         return False
 
-def gravar_fins_silenci(
-    max_durada=30,          # màxim 30 segons per si de cas
-    silenci_llindar=750,    # volum mínim per considerar silenci (ajusta si cal)
-    silenci_durada=1.5,     # segons de silenci per tallar
-):
-    """
-    Grava àudio fins que detecta silenci prolongat.
-    Retorna la ruta del fitxer WAV gravat.
-    """
+def gravar_fins_silenci(max_durada=30, silenci_llindar=780, silenci_durada=1.5,):
+    # 🔔 PITID INICIAL: Tono agut i curt (1000Hz) per avisar de que ja pot parlar
+    print("🔔 [BIP INICIAL]")
+    fer_bip(tipus="inici")
+    
     print("🎤 Escoltant... (para de parlar per enviar)")
     
     chunk_size = 1024
@@ -145,6 +141,10 @@ def gravar_fins_silenci(
                         print(f"🔇 Silenci detectat, tallant...")
                         break
 
+    # 🔕 PITID FINAL: Tono una mica més greu (600Hz) indicant que s'ha tancat el micro
+    print("🔕 [BIP FINAL]")
+    fer_bip(tipus="fi")
+
     audio = np.concatenate(chunks, axis=0)
 
     fitxer = "veu_pacient.wav"
@@ -152,3 +152,56 @@ def gravar_fins_silenci(
     durada_real = len(audio) / SAMPLE_RATE
     print(f"✅ Gravació acabada: {durada_real:.1f} segons")
     return fitxer
+
+def fer_bip(tipus="inici"):
+    """
+    Genera un bip professional tipus assistent virtual (chime).
+    - 'inici': Dos tons ascendents (desperta)
+    - 'fi': Dos tons descendents (s'apaga)
+    """
+    try:
+        # 1. Silenci inicial per despertar l'altaveu (evita que es mengi el so)
+        silenci_inicial = np.zeros(int(SAMPLE_RATE * 0.15), dtype=np.float64)
+        
+        def crea_nota(freq, durada):
+            """Sintetitza una nota amb harmònics i fade in/out per sonar natural."""
+            t = np.linspace(0, durada, int(SAMPLE_RATE * durada), False)
+            
+            # Barregem la freqüència principal amb harmònics perquè soni rodó i suau
+            ona = (0.6 * np.sin(2 * np.pi * freq * t) + 
+                   0.3 * np.sin(2 * np.pi * (freq * 2) * t) + 
+                   0.1 * np.sin(2 * np.pi * (freq * 3) * t))
+            
+            # Envolupant: Suavitzem els extrems (fade) per evitar "clics"
+            fade_len = int(SAMPLE_RATE * 0.02) # 20ms de suavitzat
+            envelope = np.ones_like(t)
+            envelope[:fade_len] = np.linspace(0, 1, fade_len)
+            envelope[-fade_len:] = np.linspace(1, 0, fade_len)
+            
+            return ona * envelope
+
+        # Notes base (Acord major bonic i clar)
+        freq_greu = 587.33  # Nota Re (D5)
+        freq_aguda = 739.99 # Nota Fa# (F#5)
+
+        if tipus == "inici":
+            # To ascendent: Greu -> curt silenci -> Agut
+            nota1 = crea_nota(freq_greu, 0.1)
+            silenci_mig = np.zeros(int(SAMPLE_RATE * 0.04))
+            nota2 = crea_nota(freq_aguda, 0.15)
+        else:
+            # To descendent: Agut -> curt silenci -> Greu
+            nota1 = crea_nota(freq_aguda, 0.1)
+            silenci_mig = np.zeros(int(SAMPLE_RATE * 0.04))
+            nota2 = crea_nota(freq_greu, 0.15)
+
+        # Unim els trossos d'àudio
+        audio_combinat = np.concatenate((silenci_inicial, nota1, silenci_mig, nota2))
+        
+        # Convertim l'àudio a int16 i baixem una mica el volum general (* 20000 en comptes de 32767)
+        audio_final = (audio_combinat * 20000).astype(np.int16)
+        
+        sd.play(audio_final, SAMPLE_RATE)
+        sd.wait()
+    except Exception as e:
+        print(f"⚠️ No s'ha pogut reproduir el bip: {e}")

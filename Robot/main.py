@@ -59,45 +59,37 @@ pausar_wake_word = threading.Event()
 def escoltar_wake_word():
     recognizer = sr.Recognizer()
     recognizer.energy_threshold = 300
-    recognizer.dynamic_energy_threshold = True
-    recognizer.pause_threshold = 0.8
+    recognizer.dynamic_energy_threshold = False # <-- APAGA ESTO
     
     print("🎤 Wake word actiu. Di 'Care-E' per activar.")
     
-    while True:
-        # ⭐ Esperar si el robot està gravant o parlant
-        if robot_parlant.is_set() or pausar_wake_word.is_set():
-            time.sleep(0.5)
-            continue
-            
-        try:
-            with sr.Microphone(sample_rate=16000) as source:
-                recognizer.adjust_for_ambient_noise(source, duration=0.2)
-                audio = recognizer.listen(source, timeout=3, phrase_time_limit=3)
-            
-            # ⭐ Comprovar de nou per si ha canviat mentre escoltava
-            if pausar_wake_word.is_set():
+    with sr.Microphone(sample_rate=16000) as source:
+        print("Calibrando ruido ambiente... (silencio)")
+        recognizer.adjust_for_ambient_noise(source, duration=2) # <-- Calibra solo una vez al principio
+        print("Calibración terminada. Escuchando...")
+        
+        while True:
+            if robot_parlant.is_set() or pausar_wake_word.is_set():
+                time.sleep(0.5)
                 continue
                 
             try:
+                # Quitamos los timeouts para ver si al menos graba algo
+                audio = recognizer.listen(source) 
+                print("Procesando audio detectado...")
+                
                 text = recognizer.recognize_google(audio, language="ca-ES").lower()
-                print(f"   👂 Detectat: '{text}'")
+                print(f" 👂 Detectat: '{text}'")
                 
                 if any(w in text for w in WAKE_WORDS):
                     print("✅ Wake word detectat!")
-                    wake_word_activat.set()
+                    pausar_wake_word.set()   # <--- AFEGEIX AQUESTA LÍNIA AQUÍ (Pausa el micro a l'instant)
+                    wake_word_activat.set()  # Avisa al bucle principal
                     
             except sr.UnknownValueError:
-                pass
+                print("❌ No se ha entendido nada")
             except sr.RequestError as e:
-                print(f"⚠️ Error: {e}")
-                time.sleep(2)
-                
-        except sr.WaitTimeoutError:
-            pass
-        except Exception as e:
-            print(f"⚠️ Error wake word: {e}")
-            time.sleep(1)
+                print(f"⚠️ Error de conexión con Google: {e}")
 
 # ─── Inicialització ───────────────────────────────────────────────────────────
 
@@ -196,15 +188,20 @@ while True:
     # ── D) ⭐ Comprovar wake word activat ───────────────────────────────────
     if wake_word_activat.is_set() and token:
         wake_word_activat.clear()
-        pausar_wake_word.set()  # ← BLOQUEJAR JA AQUÍ
+        pausar_wake_word.set()
+        
+        # En lugar de llamar a gestionar_veu() a ciegas, vamos a enviarle 
+        # el texto que ya sabemos que el usuario ha dicho si Google lo cazó.
         print("\n🎤 Processant veu del pacient...")
         try:
+            # Para una solución rápida, vamos a hacer que gestionar_veu no grabe,
+            # o vamos a modificar la lógica para que el robot responda al "dos més dos".
             gestionar_veu(token, pausar_wake_word, robot_parlant)
         except Exception as e:
             import traceback
             print(f"❌ Error: {traceback.format_exc()}")
         finally:
-            pausar_wake_word.clear()  # ← assegurar reactivació
+            pausar_wake_word.clear()
 
     # ── E) Heartbeat (cada 10s) ─────────────────────────────────────────────
     try:
