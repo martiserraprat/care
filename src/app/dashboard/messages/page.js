@@ -65,7 +65,13 @@ export default function MessagesPage() {
         </div>
       </div>
       <Card dark={dark} className="flex-1 flex flex-col overflow-hidden">
-        <ConversationView messages={messages} patientName={patient?.full_name} dark={dark} />
+        <div className="flex flex-col h-screen overflow-hidden">
+          <ConversationView 
+            messages={messages} 
+            patientName={patient?.full_name}
+            dark={dark}
+          />
+        </div>
         <MessageComposer onSend={handleSendMessage} robotOnline={robot.status === "online"} dark={dark} />
       </Card>
     </div>

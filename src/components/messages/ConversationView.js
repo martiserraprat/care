@@ -2,16 +2,15 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-
 import MessageBubble from "./MessageBubble";
 
 export default function ConversationView({ messages, patientName, dark }) {
-  const scrollRef = useRef(null);
+  // Canviem l'estratègia: una referència al final del xat
+  const messagesEndRef = useRef(null);
 
+  // Fa un scroll suau cap al final cada cop que canvien els missatges
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const formatTime = (dateStr) => {
@@ -43,15 +42,14 @@ export default function ConversationView({ messages, patientName, dark }) {
   if (messages.length === 0) {
     return (
       <div 
-        ref={scrollRef}
-        className={`flex-1 flex items-center justify-center text-center p-6 ${
+        className={`flex-1 min-h-0 flex items-center justify-center text-center p-6 ${
           dark ? "text-slate-500" : "text-slate-400"
         }`}
       >
         <div>
-          <div className="text-4xl mb-2">💬</div>
-          <p>Encara no hi ha missatges</p>
-          <p className="text-xs mt-1">
+          <div className="text-4xl mb-2 opacity-50">💬</div>
+          <p className="font-medium">Encara no hi ha missatges</p>
+          <p className="text-sm mt-1 opacity-70">
             Comença una conversa escrivint un missatge a sota
           </p>
         </div>
@@ -60,17 +58,22 @@ export default function ConversationView({ messages, patientName, dark }) {
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-6 scroll-smooth">
       {Object.entries(groupedByDay).map(([day, dayMessages]) => (
-        <div key={day}>
-          <div className="flex items-center gap-2 my-3">
-            <div className={`flex-1 h-px ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
-            <span className={`text-xs capitalize ${dark ? "text-slate-500" : "text-slate-400"}`}>
+        <div key={day} className="flex flex-col space-y-2 relative">
+          
+          {/* DATA STICKY: Es queda fixada a dalt mentre fas scroll, com a WhatsApp */}
+          <div className="sticky top-0 z-10 flex items-center justify-center py-1 bg-transparent backdrop-blur-sm pointer-events-none">
+            <span className={`text-xs px-3 py-1 rounded-full shadow-sm font-medium ${
+              dark 
+                ? "bg-slate-800/90 text-slate-300 border border-slate-700" 
+                : "bg-white/90 text-slate-500 border border-slate-200"
+            }`}>
               {day}
             </span>
-            <div className={`flex-1 h-px ${dark ? "bg-slate-800" : "bg-slate-100"}`} />
           </div>
-          <div className="space-y-2">
+
+          <div className="space-y-3 pt-1">
             {dayMessages.map(msg => (
               <MessageBubble 
                 key={`${msg.sender}-${msg.id}`} 
@@ -83,6 +86,7 @@ export default function ConversationView({ messages, patientName, dark }) {
           </div>
         </div>
       ))}
+      <div ref={messagesEndRef} className="h-2 w-full" />
     </div>
   );
 }
