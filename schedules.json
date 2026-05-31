@@ -25,6 +25,25 @@
         }
     },
     {
+        "id": "0dca36ba-568b-47e5-8144-dcbe1da5fc76",
+        "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
+        "scheduled_time": "08:00:00",
+        "days": [
+            "divendres"
+        ],
+        "dose": 20,
+        "active": true,
+        "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
+        "created_at": "2026-05-27T12:31:50.220138+00:00",
+        "slot_inventory_id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
+        "slot_inventory": {
+            "id": "70c5eba5-5639-4923-9477-891fad7ef8f6",
+            "slot": 2,
+            "pill_count": 0,
+            "medication_name": "PARACETAMOL ABAMED 1 G COMPRIMIDOS EFG"
+        }
+    },
+    {
         "id": "c36a3ee7-8019-4ca8-aeb3-40a699b702fb",
         "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
         "scheduled_time": "13:40:00",

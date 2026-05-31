@@ -11,7 +11,7 @@ import sounddevice as sd
 import numpy as np
 from scipy.io.wavfile import write
 
-SAMPLE_RATE = 16000
+SAMPLE_RATE = 8000
 
 def get_wifi_signal():
     """Llegeix la qualitat del senyal Wi-Fi intern de la Raspberry Pi."""
