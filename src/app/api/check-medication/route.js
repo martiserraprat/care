@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import path from "path";
+import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -8,7 +10,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
-    // 1. FORZAMOS LA RUTA DEL ARCHIVO JSON SÍ O SÍ
+    const { newSchedule, existingSchedules } = await req.json();
+
+    console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
+
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     const ai = new GoogleGenAI({
       vertexai: {
