@@ -62,7 +62,7 @@ export async function POST(req) {
     const ai = new GoogleGenAI({
       vertexai: {
         project: "smrlp-496809",
-        location: "us-central1",
+        location: "europe-west1",
         googleAuthOptions: {
           credentials: {
             client_email: credentials.client_email,

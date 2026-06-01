@@ -1,6 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import path from "path";
-import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -11,24 +9,18 @@ const supabaseAdmin = createClient(
 export async function POST(req) {
   try {
     // 1. FORZAMOS LA RUTA DEL ARCHIVO JSON SÍ O SÍ
-    const credsPath = path.join(process.cwd(), "google-credentials.json");
-    
-    if (!fs.existsSync(credsPath)) {
-      console.error("❌ ERROR CRÍTICO: No se encuentra el archivo JSON en:", credsPath);
-      throw new Error("El archivo google-credentials.json no está en la raíz del proyecto.");
-    }
-    
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
-    
-    const { newSchedule, existingSchedules } = await req.json();
-
-    console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
-
+    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     const ai = new GoogleGenAI({
       vertexai: {
         project: "smrlp-496809",
-        location: "us-central1",
-      }
+        location: "europe-west1",
+        googleAuthOptions: {
+          credentials: {
+            client_email: credentials.client_email,
+            private_key: credentials.private_key,
+          },
+        },
+      },
     });
 
     // AQUÍ ESTÁ LA MAGIA: RESTAURAMOS EL PROMPT COMPLETO

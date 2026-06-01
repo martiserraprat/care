@@ -16,7 +16,7 @@ WAKE_WORDS = [
     "care", "care-e", "cari", "cares", "carey",
     "kare", "kari", "kares",
     # Castellà  
-    "cari", "cariño", "caris", 'queri',
+    "cari", "cariño", "caris", "queri", "eri",
     # Anglès
     "kerry", "carry", "cary", "carrie", "eric", "què dir", 'què di',
     # Fragments
