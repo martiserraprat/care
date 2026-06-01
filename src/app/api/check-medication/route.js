@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import path from "path";
+import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -8,25 +10,28 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
+    const credsJson = process.env.GOOGLE_CREDENTIALS_JSON;
+
+    if (!credsJson) {
+      console.error("❌ ERROR CRÍTICO: No se encuentra GOOGLE_CREDENTIALS_JSON en las variables de entorno");
+      throw new Error("La variable de entorno GOOGLE_CREDENTIALS_JSON no está definida.");
+    }
+
+    const os = require('os');
+    const credsPath = path.join(os.tmpdir(), "google-credentials-tmp.json");
+    fs.writeFileSync(credsPath, credsJson);
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+
     const { newSchedule, existingSchedules } = await req.json();
 
     console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
 
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-        
-        const ai = new GoogleGenAI({
-          vertexai: {
-            project: "smrlp-496809",
-            location: "europe-west1",
-            googleAuthOptions: {
-              credentials: {
-                client_email: credentials.client_email,
-                // 👇 AÑADE EL .replace() AQUÍ 👇
-                private_key: credentials.private_key.replace(/\\n/g, '\n'),
-              },
-            },
-          },
-        });
+    const ai = new GoogleGenAI({
+      vertexai: {
+        project: "smrlp-496809",
+        location: "us-central1",
+      }
+    });
 
     // AQUÍ ESTÁ LA MAGIA: RESTAURAMOS EL PROMPT COMPLETO
     const prompt = `Ets un sistema expert de verificació de seguretat mèdica. La teva funció és protegir pacients grans o vulnerables de dosis incorrectes o perilloses.
