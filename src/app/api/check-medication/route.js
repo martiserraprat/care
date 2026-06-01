@@ -1,6 +1,4 @@
 import { GoogleGenAI } from "@google/genai";
-import path from "path";
-import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -15,18 +13,20 @@ export async function POST(req) {
     console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
 
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-    const ai = new GoogleGenAI({
-      vertexai: {
-        project: "smrlp-496809",
-        location: "europe-west1",
-        googleAuthOptions: {
-          credentials: {
-            client_email: credentials.client_email,
-            private_key: credentials.private_key,
+        
+        const ai = new GoogleGenAI({
+          vertexai: {
+            project: "smrlp-496809",
+            location: "europe-west1",
+            googleAuthOptions: {
+              credentials: {
+                client_email: credentials.client_email,
+                // 👇 AÑADE EL .replace() AQUÍ 👇
+                private_key: credentials.private_key.replace(/\\n/g, '\n'),
+              },
+            },
           },
-        },
-      },
-    });
+        });
 
     // AQUÍ ESTÁ LA MAGIA: RESTAURAMOS EL PROMPT COMPLETO
     const prompt = `Ets un sistema expert de verificació de seguretat mèdica. La teva funció és protegir pacients grans o vulnerables de dosis incorrectes o perilloses.
