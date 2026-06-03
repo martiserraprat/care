@@ -2,9 +2,32 @@
 import datetime
 import requests
 import os
+import time
 from config import API_URL, ROBOT_ID
 from dispensing import activar_motor
 from utils import reproduir_audio_base64
+
+# Events globals (s'injecten des de main.py)
+_events = {"robot_parlant": None, "pausar_wake_word": None}
+
+def set_events(robot_parlant, pausar_wake_word):
+    """Crida des de main.py per injectar els events."""
+    _events["robot_parlant"]    = robot_parlant
+    _events["pausar_wake_word"] = pausar_wake_word
+
+def _pausar_threads():
+    """Pausa wake word i amp; espera que alliberin dispositius."""
+    if _events["robot_parlant"]:
+        _events["robot_parlant"].set()
+    if _events["pausar_wake_word"]:
+        _events["pausar_wake_word"].set()
+    time.sleep(1.0)
+
+def _reactivar_threads():
+    if _events["robot_parlant"]:
+        _events["robot_parlant"].clear()
+    if _events["pausar_wake_word"]:
+        _events["pausar_wake_word"].clear()
 
 def processar_comandes(commands, token):
     for cmd in commands:
@@ -63,7 +86,13 @@ def _processar_speak(cmd, token):
         _reportar_speak(cmd.get("id"), token, ok=False, error="No s'ha rebut àudio")
         return
 
-    ok = reproduir_audio_base64(audio_b64)
+    # Pausa amp i wake word per alliberar el Voice HAT
+    _pausar_threads()
+    try:
+        ok = reproduir_audio_base64(audio_b64)
+    finally:
+        _reactivar_threads()
+
     print(f"   {'✅ Reproduït' if ok else '❌ Error reproduint'}")
     _reportar_speak(cmd.get("id"), token, ok=ok, error="Error reproduint àudio" if not ok else None)
 
@@ -82,9 +111,7 @@ def _reportar_speak(command_id, token, ok, error=None):
     except Exception as e:
         print(f"   ⚠️ Error reportant speak: {e}")
 
-# ⭐ UNA SOLA DEFINICIÓ de _parlar
 def _parlar(text, token, robot_parlant=None):
-    """Genera TTS via servidor i reprodueix al robot."""
     print(f"🔊 Care-E: \"{text}\"")
 
     if robot_parlant:
@@ -121,6 +148,10 @@ def gestionar_veu(token, pausar_wake_word=None, robot_parlant=None):
 
     if pausar_wake_word:
         pausar_wake_word.set()
+    if robot_parlant:
+        robot_parlant.set()
+
+    time.sleep(1.5)
 
     try:
         fitxer = gravar_fins_silenci(
@@ -155,6 +186,8 @@ def gestionar_veu(token, pausar_wake_word=None, robot_parlant=None):
             os.remove(fitxer)
 
     finally:
+        if robot_parlant:
+            robot_parlant.clear()
         if pausar_wake_word:
             pausar_wake_word.clear()
         print("🎤 Wake word reactivat")

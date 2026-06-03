@@ -3,7 +3,7 @@ from supabase import create_client
 
 SUPABASE_URL = "https://bekapgqkbucjukigthvl.supabase.co"
 SUPABASE_KEY = "sb_publishable_boGbYRPaDWRO8xunSZlSCQ_pvkRbfvG"
-API_URL      = "http://localhost:3000"
+API_URL      = "https://care-seven-zeta.vercel.app/"
 ROBOT_ID     = "a1b2c3d4-e5f6-7890-abcd-ef1234567895"
 LOCAL_FILE   = "schedules.json"
 PENDING_FILE = "pending_logs.json"

@@ -1,7 +1,9 @@
+// src/app/api/robot-voice/route.js
 import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import fs from "fs";
-import { createClient } from "@supabase/supabase-js";
+import os from "os";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -10,136 +12,163 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
+    // ⭐ Igual que /api/check-conflicts: escriu creds a fitxer temporal
     const credsJson = process.env.GOOGLE_CREDENTIALS_JSON;
-
     if (!credsJson) {
-      console.error("❌ ERROR CRÍTICO: No se encuentra GOOGLE_CREDENTIALS_JSON en las variables de entorno");
-      throw new Error("La variable de entorno GOOGLE_CREDENTIALS_JSON no está definida.");
+      throw new Error("La variable GOOGLE_CREDENTIALS_JSON no està definida.");
     }
-
-    const os = require('os');
     const credsPath = path.join(os.tmpdir(), "google-credentials-tmp.json");
     fs.writeFileSync(credsPath, credsJson);
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
 
-    const { newSchedule, existingSchedules } = await req.json();
+    const formData = await req.formData();
+    const audioFile = formData.get("audio");
+    const robotId = formData.get("robot_id");
+    const robotToken = formData.get("robot_token");
 
-    console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
+    const now = new Date().toLocaleString("ca-ES", {
+      timeZone: "Europe/Madrid",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
+    const { data: robot } = await supabaseAdmin
+      .from("robots")
+      .select("id")
+      .eq("id", robotId)
+      .eq("robot_token", robotToken)
+      .single();
+
+    if (!robot) {
+      return Response.json({ error: "Token invàlid" }, { status: 401 });
+    }
+
+    const { data: patient } = await supabaseAdmin
+      .from("patients")
+      .select("id, full_name")
+      .eq("robot_id", robotId)
+      .single();
+
+    const audioBuffer = await audioFile.arrayBuffer();
+    const audioBase64 = Buffer.from(audioBuffer).toString("base64");
+
+    if (!audioBase64 || audioBase64.length < 100) {
+      return Response.json({
+        success: true,
+        intent: "unclear",
+        transcript: "",
+        response_text: "Hola! M'has cridat? Recorda parlar després d'activar-me.",
+      });
+    }
+
+    // ⭐ Sense googleAuthOptions explícit — la llibreria llegeix de GOOGLE_APPLICATION_CREDENTIALS
     const ai = new GoogleGenAI({
       vertexai: {
         project: "smrlp-496809",
         location: "us-central1",
-      }
+      },
     });
 
-    // AQUÍ ESTÁ LA MAGIA: RESTAURAMOS EL PROMPT COMPLETO
-    const prompt = `Ets un sistema expert de verificació de seguretat mèdica. La teva funció és protegir pacients grans o vulnerables de dosis incorrectes o perilloses.
+    const prompt = `Ets l'assistent intel·ligent del robot Care-E, dissenyat per acompanyar pacients grans i ajudar els seus cuidadors. 
+    T'arribarà un àudio del pacient. Has de fer el següent:
+    La data i hora ACTUAL és: ${now}
 
-NOVA PROGRAMACIÓ A VERIFICAR:
-- Medicament: ${newSchedule.medication_name}
-- Dosi per presa: ${newSchedule.dose} pastilla/es
-- Hora: ${newSchedule.time}
-- Dies: ${newSchedule.days?.join(", ")}
+    1. TRANSCRIURE: Fes una transcripció literal del que sents a "raw_transcript".
+    2. REESCRIURE EL MISSATGE PER AL CUIDADOR ("clean_message"): 
+       - Ignora sorolls, errors i quequejos.
+       - Redacta un missatge professional, empàtic i complet en TERCERA PERSONA que resumeixi perfectament què vol el pacient.
+       - 🧠 AFEGIT DE VALOR: Si el pacient fa una pregunta objectiva sobre medicació (ex: dosis, freqüència), salut, o fets coneguts, AFEGEIX al final del text una "[Nota de l'Assistent]" amb la informació general recomanada per ajudar el cuidador a respondre ràpidament.
+       - Exemple: "El pacient demana saber quants paracetamols pot prendre com a màxim al dia. \\n\\n[Nota de l'Assistent: La dosi recomanada per a adults no ha de superar els 4 grams al dia, generalment prenent 1 gram cada 8 hores. Cal revisar la seva pauta mèdica específica.]"
+    3. CLASSIFICAR la INTENCIÓ ("intent"):
+       - "caregiver": el pacient demana enviar un missatge, fer una pregunta al cuidador o demana ajuda.
+       - "robot": el pacient busca interacció directa amb la IA (ex: "quina hora és?", "quin temps fa?").
+       - "unclear": no s'entén absolutament res.
+    4. URGÈNCIA ("urgency", només si és "caregiver"):
+       - "emergency": dolor intens, caiguda, sang, mareig fort.
+       - "high": preocupació, malestar moderat, dubtes urgents de medicació.
+       - "normal": comentaris o dubtes genèrics sense perill.
+       - "low": salutacions o informació rutinària.
+    5. RESPOSTA PEL ROBOT ("robot_response"): 
+       - Si la intenció és "robot", respon al pacient de forma empàtica i útil.
+       - Si la intenció és "caregiver", confirma l'enviament amb una frase com: "Molt bé, acabo d'enviar aquesta pregunta al teu cuidador perquè t'ho revisi."
 
-MEDICAMENTS JA PROGRAMATS DEL PACIENT (BASE DE DADES):
-${existingSchedules.length === 0
-  ? "Cap altre medicament programat."
-  : existingSchedules.map(s => {
-      const name = s.slot_inventory?.medication_name || s.medication_name || "Desconegut";
-      const dose = s.dose;
-      const time = s.scheduled_time?.slice(0, 5) || s.time || "?";
-      return `- ${name}: ${dose} pastilla/es a les ${time}h`;
-    }).join("\n")
-}
-
-REGLES DE SEGURETAT QUE HAS D'APLICAR ESTRICTAMENT:
-
-DOSI MÀXIMA PER PRESA:
-- Avalua si la dosi és adequada per a cada medicament específic.
-- Si dosi >= 5 pastilles de qualsevol medicament → safe: false automàticament.
-- Si dosi >= 3 pastilles d'un medicament potencialment perillós → warning.
-
-INTERACCIONS PERILLOSES (safe: false):
-- Detecta interaccions greus entre el NOU medicament i els JA PROGRAMATS.
-- Duplicació terapèutica (ex: dos AINEs, o el mateix medicament repetit a la mateixa hora).
-- Dosi total diària excessiva si el mateix medicament apareix programat múltiples vegades al dia.
-
-INTERACCIONS A VIGILAR (warning però safe: true):
-- Dos medicaments que interaccionen moderadament o estan programats amb poca diferència de temps.
-
-CRITERI GENERAL:
-- Sigues conservador: si tens dubtes, safe: false.
-
-Respon ÚNICAMENT amb un objecte JSON vàlid:
-{"safe": true, "warnings": [], "info": "missatge en català"}`;
-
-    console.log("Enviando al modelo gemini-2.5-flash...");
+    Respon ÚNICAMENT amb JSON vàlid:
+    {
+      "raw_transcript": "...",
+      "clean_message": "...",
+      "intent": "caregiver" | "robot" | "unclear",
+      "urgency": "low" | "normal" | "high" | "emergency",
+      "robot_response": "..."
+    }`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      }
+      contents: [{
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "audio/wav", data: audioBase64 } },
+        ],
+      }],
+      config: { responseMimeType: "application/json" },
     });
 
-    const text = response.text;
-    console.log("=== RESPUESTA DE VERTEX AI OK ===");
-    console.log(text);
+    const parsed = JSON.parse(response.text);
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      console.log("=== PARSE ERROR ===", e.message);
-      parsed = { safe: true, warnings: [], info: "Error al llegir la resposta de la IA." };
+    if (!parsed.clean_message || parsed.clean_message.trim().length === 0) {
+      return Response.json({
+        success: true,
+        intent: "unclear",
+        transcript: parsed.raw_transcript,
+        response_text: "No t'he entès bé, pots repetir-ho?",
+      });
     }
 
-    // RESTAURAMOS TAMBIÉN LAS VALIDACIONES MANUALES DEL SERVIDOR POR SEGURIDAD EXTRA
-    const doseNum = parseInt(newSchedule.dose);
-    const medName = newSchedule.medication_name?.toLowerCase() || "";
-
-    if (doseNum >= 5) {
-      parsed.safe = false;
-      parsed.warnings = [...(parsed.warnings || []), `Dosi molt elevada: ${doseNum} pastilles per presa.`];
-      parsed.info = `Dosi de ${doseNum} pastilles és excessiva. Revisa la programació.`;
-    }
-
-    if ((medName.includes("paracetamol") || medName.includes("acetaminofen")) && doseNum > 2) {
-      parsed.safe = false;
-      if (!parsed.warnings?.some(w => w.toLowerCase().includes("paracetamol"))) {
-        parsed.warnings = [...(parsed.warnings || []), `Paracetamol: dosi màxima per presa és 2 comprimits.`];
-      }
-      parsed.info = `La dosi de Paracetamol és excessiva. Màxim 2 comprimits per presa.`;
-    }
-
-    // ⭐ NOU: VERIFICACIÓ D'INVENTARI
-    if (newSchedule.slot_inventory_id) {
-      const { data: slot } = await supabaseAdmin
-        .from("slot_inventory")
-        .select("pill_count, slot")
-        .eq("id", newSchedule.slot_inventory_id)
+    let voiceMessage = null;
+    if (parsed.intent === "caregiver") {
+      const { data } = await supabaseAdmin
+        .from("voice_messages")
+        .insert({
+          robot_id: robotId,
+          patient_id: patient?.id,
+          transcript: parsed.clean_message,
+          intent: parsed.intent,
+          urgency: parsed.urgency || "normal",
+          robot_response: parsed.robot_response,
+        })
+        .select()
         .single();
-
-      if (slot && slot.pill_count < doseNum) {
-        parsed.safe = false;
-        parsed.warnings = [
-          ...(parsed.warnings || []),
-          `Inventari insuficient: només hi ha ${slot.pill_count} pastilla/es al slot ${slot.slot}, però la dosi requereix ${doseNum}.`
-        ];
-        parsed.info = `No es pot programar: cal omplir el slot abans. Disponibles: ${slot.pill_count}, requerides: ${doseNum}.`;
-      }
+      voiceMessage = data;
     }
 
-    return Response.json(parsed);
+    if (parsed.intent === "caregiver" && ["high", "emergency"].includes(parsed.urgency)) {
+      await supabaseAdmin.from("alerts").insert({
+        robot_id: robotId,
+        type: "voice_message",
+        severity: parsed.urgency === "emergency" ? "high" : "medium",
+        description: `Missatge del pacient: "${parsed.clean_message}"`,
+        medication_name: null,
+      });
+    }
+
+    return Response.json({
+      success: true,
+      intent: parsed.intent,
+      transcript: parsed.raw_transcript,
+      response_text:
+        parsed.intent === "robot" ? parsed.robot_response :
+        parsed.intent === "caregiver" ? "Ho he enviat al teu cuidador." :
+        "No t'he entès bé, pots repetir-ho?",
+    });
 
   } catch (error) {
-    console.error("=== ERROR VERTEX AI ===", error);
+    console.error("Error voice:", error);
     return Response.json({
-      safe: true,
-      warnings: ["Fallo forzado. Revisa la consola."],
-      info: "Error: " + error.message,
+      error: error.message,
+      response_text: "Ho sento, ha hagut un problema. Torna-ho a provar.",
     }, { status: 500 });
   }
 }
