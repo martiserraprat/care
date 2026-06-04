@@ -1,8 +1,8 @@
 [
     {
-        "id": "6091fb24-0dc7-4f43-9d6d-f09a27ab1690",
+        "id": "c0ea4b74-1f29-4491-8c90-d6e8a24a6a0a",
         "patient_id": "8ba65b5a-2324-4121-a78f-cae7e0566728",
-        "scheduled_time": "08:00:00",
+        "scheduled_time": "11:15:00",
         "days": [
             "dilluns",
             "dimarts",
@@ -12,16 +12,16 @@
             "dissabte",
             "diumenge"
         ],
-        "dose": 10,
+        "dose": 20,
         "active": true,
         "created_by": "e6937caf-5bde-4c1d-94aa-63ce5705cad8",
-        "created_at": "2026-06-04T15:48:20.64477+00:00",
-        "slot_inventory_id": "4ac0284e-f946-44c7-aca2-520d9068cc76",
+        "created_at": "2026-06-04T16:43:06.612096+00:00",
+        "slot_inventory_id": "b6b5b0ba-be3b-4bab-91b5-dd03de1332ae",
         "slot_inventory": {
-            "id": "4ac0284e-f946-44c7-aca2-520d9068cc76",
-            "slot": 1,
+            "id": "b6b5b0ba-be3b-4bab-91b5-dd03de1332ae",
+            "slot": 2,
             "pill_count": 33,
-            "medication_name": "PARACETAMOL STADA 1 G COMPRIMIDOS EFERVESCENTES EFG"
+            "medication_name": "GRIPPOSTAD CON IBUPROFENO 200 MG/5 MG COMPRIMIDOS RECUBIERTOS CON PELICULA"
         }
     }
 ]

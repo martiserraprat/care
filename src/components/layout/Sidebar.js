@@ -128,14 +128,6 @@ export default function Sidebar() {
       {/* Bottom */}
       <div className={`p-4 border-t space-y-3 ${dark ? "border-slate-800" : "border-slate-100"}`}>
 
-        {/* Dispense */}
-        <button
-          className="w-full py-2.5 rounded-2xl text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-px"
-          style={{ background: "linear-gradient(135deg, #0ea5e9, #0284c7)", boxShadow: "0 4px 16px rgba(14,165,233,0.3)" }}
-        >
-          💊 Dispensar Ara
-        </button>
-
         {/* User row */}
         <div className={`flex items-center gap-3 px-2 py-2 rounded-xl ${
           dark ? "hover:bg-slate-800/50" : "hover:bg-slate-50"
