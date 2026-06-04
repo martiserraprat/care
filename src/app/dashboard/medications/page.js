@@ -80,8 +80,20 @@ export default function MedicationsPage() {
 
   const deleteSlot = async (slotNum) => {
     const slotData = inventory[slotNum - 1];
-    await supabase.from("dispense_schedules").update({ active: false, slot_inventory_id: null }).eq("slot_inventory_id", slotData.id);
-    await supabase.from("slot_inventory").delete().eq("id", slotData.id);
+    if (!slotData) return;
+
+    const res = await fetch("/api/delete-slot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slot_id: slotData.id }),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      alert("Error: " + result.error);
+      return;
+    }
+
     setDeletingSlot(null);
     await fetchAll();
   };
