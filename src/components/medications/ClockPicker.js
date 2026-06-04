@@ -15,13 +15,22 @@ function ClockPicker({ value, onChange, dark }) {
   const minRef  = useRef(null);
   const wrapRef = useRef(null);
 
+  // 🌟 NOU: Escolta canvis externament (com els de la IA) per sincronitzar el rellotge
+  useEffect(() => {
+    if (value && value.includes(":")) {
+      const [newH, newM] = value.split(":");
+      setSelH(newH);
+      setSelM(newM);
+    }
+  }, [value]);
+
   useEffect(() => {
     if (!open) return;
     const hi = HOURS.indexOf(selH);
     const mi = MINUTES.indexOf(selM) !== -1 ? MINUTES.indexOf(selM) : 0;
     if (hourRef.current) hourRef.current.scrollTop = hi * 44;
     if (minRef.current)  minRef.current.scrollTop  = mi * 44;
-  }, [open]);
+  }, [open, selH, selM]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,7 +86,7 @@ function ClockPicker({ value, onChange, dark }) {
               </div>
             </div>
           </div>
-          <button onClick={confirm} className="w-full py-2.5 rounded-xl bg-linear-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold">
+          <button type="button" onClick={confirm} className="w-full py-2.5 rounded-xl bg-linear-to-r from-sky-500 to-sky-600 text-white text-sm font-semibold">
             Confirmar — {selH}:{selM}
           </button>
         </div>

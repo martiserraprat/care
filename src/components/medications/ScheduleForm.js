@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ClockPicker from "@/components/medications/ClockPicker";
+import VoiceScheduleButton from "@/components/medications/VoiceScheduleButton";
 
 const DAYS_CA = [
   { key: "dilluns",   short: "Dl" },
@@ -14,7 +15,7 @@ const DAYS_CA = [
 ];
 
 const COLORS = [
-  { dot: "bg-sky-400",     ring: "border-sky-500" },
+  { dot: "bg-sky-400",    ring: "border-sky-500" },
   { dot: "bg-violet-400",  ring: "border-violet-500" },
   { dot: "bg-emerald-400", ring: "border-emerald-500" },
   { dot: "bg-amber-400",   ring: "border-amber-500" },
@@ -37,6 +38,9 @@ export default function ScheduleForm({
   const [saved, setSaved]       = useState(false);
   const [error, setError]       = useState(null);
   const [warning, setWarning]   = useState(null);
+  
+  // NOU ESTAT: Missatge de la veu integrat a la pròpia web
+  const [voiceStatus, setVoiceStatus] = useState(null);
 
   const inp = `w-full px-4 py-2.5 rounded-xl border outline-none text-sm transition-all ${
     dark
@@ -55,20 +59,20 @@ export default function ScheduleForm({
     const selectedSlot = loadedSlots.find(s => s.id === formData.slot_inventory_id);
     if (!selectedSlot) return null;
 
-  const res = await fetch("/api/check-medication", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      newSchedule: {
-        medication_name: selectedSlot.medication_name,
-        dose: formData.dose,
-        time: formData.time,
-        days: formData.days,
-        slot_inventory_id: selectedSlot.id, 
-      },
-      existingSchedules,
-    }),
-  });
+    const res = await fetch("/api/check-medication", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        newSchedule: {
+          medication_name: selectedSlot.medication_name,
+          dose: formData.dose,
+          time: formData.time,
+          days: formData.days,
+          slot_inventory_id: selectedSlot.id, 
+        },
+        existingSchedules,
+      }),
+    });
 
     return await res.json();
   };
@@ -94,6 +98,7 @@ export default function ScheduleForm({
       await onSave(form);
       setSaved(true);
       setForm(EMPTY);
+      setVoiceStatus(null);
       setTimeout(() => setSaved(false), 2500);
 
     } catch (e) {
@@ -111,11 +116,29 @@ export default function ScheduleForm({
       await onSave(form);
       setSaved(true);
       setForm(EMPTY);
+      setVoiceStatus(null);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
       setError(e.message || "Error en guardar");
     }
     setSaving(false);
+  };
+
+  // Autoomple i mostra l'estat a la web directament
+  const handleVoiceResult = (data) => {
+    setError(null);
+    setVoiceStatus(data.summary_message);
+
+    if (data.medication_match_id) {
+      setForm({
+        slot_inventory_id: data.medication_match_id,
+        time: data.time || "08:00",
+        dose: data.dose ? String(data.dose) : "1",
+        days: data.days?.length > 0 ? data.days : [],
+      });
+    } else if (data.medication_heard) {
+      setError(`No tinc "${data.medication_heard}" al pastiller. Afegeix-lo primer.`);
+    }
   };
 
   return (
@@ -126,7 +149,20 @@ export default function ScheduleForm({
         </h3>
         <p className={`text-sm mb-5 ${dark ? "text-slate-500" : "text-slate-400"}`}>
           {subtitle}
-        </p>
+        </p>  
+        
+        <div className="mb-4 space-y-2">
+          <VoiceScheduleButton onResult={handleVoiceResult} dark={dark} />
+          
+          {/* Avís integrat en comptes del popup del navegador */}
+          {voiceStatus && (
+            <div className={`p-3 rounded-xl text-xs font-medium border ${
+              dark ? "bg-slate-800/60 border-slate-700 text-slate-300" : "bg-violet-50 border-violet-100 text-violet-700"
+            }`}>
+              🤖 {voiceStatus}
+            </div>
+          )}
+        </div>
 
         <div className="space-y-4">
 
@@ -146,6 +182,7 @@ export default function ScheduleForm({
                   const selected = form.slot_inventory_id === s.id;
                   return (
                     <button
+                      type="button"
                       key={s.id}
                       onClick={() => setForm(f => ({ ...f, slot_inventory_id: s.id }))}
                       className={`p-3 rounded-xl border text-left transition-all ${
@@ -204,6 +241,7 @@ export default function ScheduleForm({
                 const active = form.days.includes(key);
                 return (
                   <button
+                    type="button"
                     key={key}
                     onClick={() => toggleDay(key)}
                     className={`w-9 h-9 rounded-lg text-xs font-semibold transition-all ${
@@ -215,6 +253,7 @@ export default function ScheduleForm({
                 );
               })}
               <button
+                type="button"
                 onClick={() => setForm(f => ({ ...f, days: DAYS_CA.map(d => d.key) }))}
                 className={`px-2 h-9 rounded-lg text-xs ${dark ? "text-slate-400 hover:text-slate-200" : "text-slate-400 hover:text-slate-600"}`}
               >
@@ -223,6 +262,7 @@ export default function ScheduleForm({
             </div>
           </div>
 
+          {/* TOTA LA TEVA UI ORIGINAL RECUPERADA DES D'AQUÍ */}
           {/* Animació de verificació */}
           {checking && (
             <div className={`p-4 rounded-xl border ${dark ? "bg-sky-900/20 border-sky-800" : "bg-sky-50 border-sky-200"}`}>
@@ -277,6 +317,7 @@ export default function ScheduleForm({
               )}
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={confirmAnyway}
                   disabled={saving}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors ${
@@ -286,6 +327,7 @@ export default function ScheduleForm({
                   Guardar igualment
                 </button>
                 <button
+                  type="button"
                   onClick={() => setWarning(null)}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold ${dark ? "bg-slate-700 text-slate-200" : "bg-slate-100 text-slate-600"}`}
                 >
@@ -312,6 +354,7 @@ export default function ScheduleForm({
           ) : !warning && !checking ? (
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving || checking || !form.slot_inventory_id || !form.time || form.days.length === 0}
                 className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white disabled:opacity-50 hover:-translate-y-px active:translate-y-0 transition-all"
@@ -321,6 +364,7 @@ export default function ScheduleForm({
               </button>
               {onCancel && (
                 <button
+                  type="button"
                   onClick={onCancel}
                   className={`px-4 py-3 rounded-2xl text-sm border transition-colors ${dark ? "border-slate-700 text-slate-300" : "border-slate-200 text-slate-600"}`}
                 >
