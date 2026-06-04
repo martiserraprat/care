@@ -156,7 +156,7 @@ def gestionar_veu(token, pausar_wake_word=None, robot_parlant=None):
     try:
         fitxer = gravar_fins_silenci(
             max_durada=30,
-            silenci_llindar=750,
+            silenci_llindar=2500,
             silenci_durada=1.5,
         )
 

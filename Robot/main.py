@@ -10,7 +10,7 @@ import requests
 import speech_recognition as sr
 from config import supabase, ROBOT_ID, API_URL, LOCAL_FILE, DIES_CAT
 from dispensing import processar_schedule
-from commands import processar_comandes, gestionar_veu
+from commands import processar_comandes, gestionar_veu, set_events
 from utils import get_wifi_signal, flush_pendents, carregar_pendents
 
 WAKE_WORDS = [
@@ -26,10 +26,19 @@ WAKE_WORDS = [
     "hector", "héctor",
 ]
 
-MIC_DEVICE = 1    # USB PnP Audio Device (sr.Microphone index)
+MIC_DEVICE = 1
 MIC_RATE   = 48000
-AMP_DEVICE = 0    # Google Voice HAT
+AMP_DEVICE = 0
 AMP_RATE   = 48000
+
+# ─── Events compartits ────────────────────────────────────────────────────────
+
+wake_word_activat = threading.Event()
+robot_parlant     = threading.Event()
+pausar_wake_word  = threading.Event()
+
+# Injecta els events al mòdul commands
+set_events(robot_parlant, pausar_wake_word)
 
 # ─── Funcions de sincronització local ────────────────────────────────────────
 
@@ -51,12 +60,6 @@ def load_schedules_local():
             print(f"⚠️ Error llegint fitxer local: {e}")
     return []
 
-# ─── Events compartits ────────────────────────────────────────────────────────
-
-wake_word_activat = threading.Event()
-robot_parlant     = threading.Event()
-pausar_wake_word  = threading.Event()
-
 # ─── Wake Word ────────────────────────────────────────────────────────────────
 
 def escoltar_wake_word():
@@ -66,52 +69,63 @@ def escoltar_wake_word():
 
     print("🎤 Wake word actiu. Di 'Care-E' per activar.")
 
-    with sr.Microphone(device_index=MIC_DEVICE, sample_rate=MIC_RATE) as source:
-        print("Calibrant soroll ambient...")
-        recognizer.adjust_for_ambient_noise(source, duration=2)
-        print("Calibració acabada. Escoltant...")
+    while True:
+        try:
+            with sr.Microphone(device_index=MIC_DEVICE, sample_rate=MIC_RATE) as source:
+                print("Calibrant soroll ambient...")
+                recognizer.adjust_for_ambient_noise(source, duration=2)
+                print("Calibració acabada. Escoltant...")
 
-        while True:
-            if robot_parlant.is_set() or pausar_wake_word.is_set():
-                time.sleep(0.5)
-                continue
+                while True:
+                    if robot_parlant.is_set() or pausar_wake_word.is_set():
+                        break
 
-            try:
-                audio = recognizer.listen(source, timeout=5, phrase_time_limit=4)
-                text = recognizer.recognize_google(audio, language="ca-ES").lower()
-                print(f" 👂 Detectat: '{text}'")
+                    try:
+                        audio = recognizer.listen(source, timeout=5, phrase_time_limit=4)
+                        text = recognizer.recognize_google(audio, language="ca-ES").lower()
+                        print(f" 👂 Detectat: '{text}'")
 
-                if any(w in text for w in WAKE_WORDS):
-                    print("✅ Wake word detectat!")
-                    pausar_wake_word.set()
-                    wake_word_activat.set()
+                        if any(w in text for w in WAKE_WORDS):
+                            print("✅ Wake word detectat!")
+                            pausar_wake_word.set()
+                            wake_word_activat.set()
+                            break
 
-            except sr.WaitTimeoutError:
-                pass
-            except sr.UnknownValueError:
-                pass
-            except sr.RequestError as e:
-                print(f"⚠️ Error Google: {e}")
-            except Exception as e:
-                print(f"⚠️ Error wake word: {e}")
-                time.sleep(1)
+                    except sr.WaitTimeoutError:
+                        pass
+                    except sr.UnknownValueError:
+                        pass
+                    except sr.RequestError as e:
+                        print(f"⚠️ Error Google: {e}")
+
+            while pausar_wake_word.is_set() or robot_parlant.is_set():
+                time.sleep(0.3)
+
+        except Exception as e:
+            print(f"⚠️ Error wake word: {e}")
+            time.sleep(2)
 
 # ─── Manté l'amplificador encès ──────────────────────────────────────────────
 
 def mantenir_amp_encesa():
-    try:
-        with sd.OutputStream(
-            samplerate=AMP_RATE,
-            channels=2,
-            dtype='int16',
-            device=AMP_DEVICE,
-            blocksize=4096
-        ) as stream:
-            silenci = np.zeros((4096, 2), dtype=np.int16)
-            while True:
-                stream.write(silenci)
-    except Exception as e:
-        print(f"⚠️ Error amp: {e}")
+    while True:
+        if robot_parlant.is_set() or pausar_wake_word.is_set():
+            time.sleep(0.3)
+            continue
+        try:
+            with sd.OutputStream(
+                samplerate=AMP_RATE,
+                channels=2,
+                dtype='int16',
+                device=AMP_DEVICE,
+                blocksize=4096
+            ) as stream:
+                silenci = np.zeros((4096, 2), dtype=np.int16)
+                while not (robot_parlant.is_set() or pausar_wake_word.is_set()):
+                    stream.write(silenci)
+        except Exception as e:
+            print(f"⚠️ Error amp: {e}")
+            time.sleep(1)
 
 # ─── Inicialització ───────────────────────────────────────────────────────────
 
@@ -123,7 +137,6 @@ if not res.data:
         "id": ROBOT_ID, "name": "Care-E", "status": "offline",
     }).execute()
     print("=" * 40 + f"\n  Care-E Robot ID:\n  {ROBOT_ID}\n" + "=" * 40)
-    print("Introdueix aquest ID a la web per vincular el robot.")
 else:
     robot_data = res.data[0]
     token = robot_data.get("robot_token")
@@ -198,7 +211,8 @@ while True:
     if wake_word_activat.is_set() and token:
         wake_word_activat.clear()
         pausar_wake_word.set()
-        time.sleep(1.0)
+        robot_parlant.set()
+        time.sleep(1.5)
 
         print("\n🎤 Processant veu del pacient...")
         try:
@@ -207,6 +221,7 @@ while True:
             import traceback
             print(f"❌ Error: {traceback.format_exc()}")
         finally:
+            robot_parlant.clear()
             pausar_wake_word.clear()
 
     if now - last_heartbeat > 10:

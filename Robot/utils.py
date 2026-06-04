@@ -139,9 +139,8 @@ def gravar_fins_silenci(max_durada=30, silenci_llindar=780, silenci_durada=1.5):
                 if ha_parlat:
                     chunks_silence += 1
                     if chunks_silence >= max_silence_chunks:
-                        print(f"🔇 Silenci detectat, tallant...")
+                        print(f"\n🔇 Silenci detectat, tallant...")
                         break
-
     print("🔕 [BIP FINAL]")
     fer_bip(tipus="fi")
 
