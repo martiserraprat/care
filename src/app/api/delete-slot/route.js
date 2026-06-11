@@ -1,3 +1,8 @@
+// /api/delete-slot
+// Esborra un slot de l'inventari del pastiller gestionant les foreign keys.
+// El RLS de Supabase no permet fer UPDATE a manual_commands des del client,
+// per això es fa des del servidor amb service_role_key.
+
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";

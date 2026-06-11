@@ -1,4 +1,7 @@
-// src/hooks/useChatData.js
+// hooks/useChatData.js
+// Hook personalitzat que gestiona totes les dades del xat entre cuidador i pacient.
+// Carrega missatges de les dues taules (manual_commands i voice_messages),
+// els combina en un format unificat i s'actualitza en temps real via Supabase Realtime.
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -12,6 +15,7 @@ export function useChatData() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Obté el robot vinculat a l'usuari autenticat
     const { data: robotData } = await supabase
       .from("robots")
       .select("*")
@@ -25,6 +29,7 @@ export function useChatData() {
       return; 
     }
 
+    // Obté el pacient vinculat al robot
     const { data: patientData } = await supabase
       .from("patients")
       .select("*")
@@ -33,24 +38,27 @@ export function useChatData() {
       
     setPatient(patientData);
 
+    // Missatges enviats pel cuidador al pacient (via /api/speak-message)
     const { data: caregiverMsgs } = await supabase
-    .from("manual_commands")
-    .select("id, robot_id, message_text, status, created_at")
-    .eq("robot_id", robotData.id)
-    .eq("type", "speak")
-    .order("created_at", { ascending: true })
-    .limit(100);
+      .from("manual_commands")
+      .select("id, robot_id, message_text, status, created_at")
+      .eq("robot_id", robotData.id)
+      .eq("type", "speak")
+      .order("created_at", { ascending: true })
+      .limit(100);
 
+    // Missatges de veu del pacient processats per Gemini (via /api/robot-voice)
     const { data: patientMsgs } = await supabase
-        .from("voice_messages")
-        .select("id, robot_id, transcript, urgency, intent, read_by_caregiver, created_at")
-        .eq("robot_id", robotData.id)
-        .order("created_at", { ascending: true })
-        .limit(100);
+      .from("voice_messages")
+      .select("id, robot_id, transcript, urgency, intent, read_by_caregiver, created_at")
+      .eq("robot_id", robotData.id)
+      .order("created_at", { ascending: true })
+      .limit(100);
 
-    // 3. Combinem i normalitzem al format que espera ConversationView
+    // Combina i normalitza els dos tipus de missatge al format que espera ConversationView
+    // Ambdós tipus comparteixen: id, robot_id, sender, content, urgency, created_at
     const combined = [
-    ...(caregiverMsgs || []).map(m => ({
+      ...(caregiverMsgs || []).map(m => ({
         id: m.id,
         robot_id: m.robot_id,
         sender: "caregiver",
@@ -58,50 +66,50 @@ export function useChatData() {
         urgency: "normal",
         intent: null,
         is_read: true,
-        command_status: m.status,
+        command_status: m.status,  // pending/in_progress/completed/failed
         created_at: m.created_at,
-    })),
-    ...(patientMsgs || []).map(m => ({
+      })),
+      ...(patientMsgs || []).map(m => ({
         id: m.id,
         robot_id: m.robot_id,
         sender: "patient",
         content: m.transcript,
-        urgency: m.urgency,
-        intent: m.intent,
+        urgency: m.urgency,        // low/normal/high/emergency
+        intent: m.intent,          // caregiver/robot/unclear
         is_read: m.read_by_caregiver,
         command_status: null,
         created_at: m.created_at,
-    })),
+      })),
     ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     setMessages(combined);
     setLoading(false);
   }, []);
 
-  // 2. Efecto inicial y Suscripción a Realtime (¡Adiós setInterval!)
   useEffect(() => {
     fetchData();
 
-    // Nos suscribimos a los cambios en la tabla original de mensajes
-    // NOTA: Reemplaza "voice_messages" por el nombre real de tu tabla si es diferente.
+    // Subscripció a Supabase Realtime per actualitzar el xat sense polling
+    // S'activa quan arriba un missatge nou del pacient o quan el robot
+    // actualitza l'estat d'un missatge del cuidador (completed/failed)
     const channel = supabase
-        .channel('chat_updates')
-        .on(
+      .channel('chat_updates')
+      .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'voice_messages' },
         () => fetchData()
-        )
-        .on(
+      )
+      .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'manual_commands' },
-        () => fetchData()  // ⭐ quan el robot marca completed/failed
-        )
-        .subscribe();
+        () => fetchData()
+      )
+      .subscribe();
 
     return () => supabase.removeChannel(channel);
-    }, [fetchData]);
+  }, [fetchData]);
 
-  // 3. Marcar como leídos
+  // Marca automàticament com a llegits els missatges del pacient quan el cuidador obre el xat
   useEffect(() => {
     if (!robot || messages.length === 0) return;
     
@@ -114,14 +122,13 @@ export function useChatData() {
         .from("voice_messages")
         .update({ read_by_caregiver: true })
         .in("id", unread)
-        .then(() => {
-        });
+        .then(() => {});
     }
   }, [robot, messages]);
 
   const handleSendMessage = async (text) => {
-
-    console.log("Enviant:", { robot_id: robot?.id, message: text }); // ⭐ debug
+    // Envia el missatge al cloud que genera TTS i crea la comanda per al robot
+    console.log("Enviant:", { robot_id: robot?.id, message: text });
 
     const res = await fetch("/api/speak-message", {
       method: "POST",

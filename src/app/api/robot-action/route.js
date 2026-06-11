@@ -1,6 +1,10 @@
-// src/app/api/robot-action/route.js
+// /api/robot-action
+// El robot reporta el resultat d'una acció executada (dispensació o missatge de veu).
+// Gestiona dos tipus d'acció: "dispense" i "speak".
+
 import { createClient } from "@supabase/supabase-js";
 
+// Client admin per escriure logs i actualitzar estats sense restriccions de RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -22,9 +26,8 @@ export async function POST(req) {
       return Response.json({ error: "Token invàlid" }, { status: 401 });
     }
 
-    // ══════════════════════════════════════════
-    // ACCIÓ: DISPENSE
-    // ══════════════════════════════════════════
+    // ─── ACCIÓ: DISPENSE ─────────────────────────────────────────
+    // El robot informa que ha executat (o intentat) una dispensació
     if (action === "dispense") {
       const { 
         schedule_id, 
@@ -36,6 +39,7 @@ export async function POST(req) {
         command_id,
       } = payload;
 
+      // Calcula l'estat final: si dose_real < dose és failed_inventory
       const finalDoseReal = dose_real !== undefined ? dose_real : dose;
       const finalStatus = robotStatus || (
         finalDoseReal === 0 ? "failed_inventory" :
@@ -46,6 +50,7 @@ export async function POST(req) {
       let medication_name = "Desconegut";
       let scheduled_time = null;
 
+      // Obté el nom del medicament: des d'un horari programat o una ordre manual
       if (schedule_id) {
         const { data: schedule } = await supabaseAdmin
           .from("dispense_schedules")
@@ -66,6 +71,7 @@ export async function POST(req) {
         if (slot) medication_name = slot.medication_name;
       }
 
+      // Construeix el missatge d'error segons el tipus de dispensació
       let error_reason = null;
       if (finalStatus === "failed_inventory") {
         error_reason = `Dispensació incompleta: demanades ${dose}, dispensades ${finalDoseReal}.`;
@@ -77,6 +83,7 @@ export async function POST(req) {
         timeZone: "Europe/Madrid" 
       });
       
+      // Guarda el log de dispensació a la base de dades per l'historial
       const { error: logError } = await supabaseAdmin
         .from("dispense_logs")
         .insert({
@@ -100,6 +107,7 @@ export async function POST(req) {
         );
       }
 
+      // Resta les pastilles dispensades de l'inventari via funció SQL
       if (slot_inventory_id && finalDoseReal > 0) {
         const { error: rpcError } = await supabaseAdmin.rpc("decrement_pill_count", {
           slot_id: slot_inventory_id,
@@ -108,6 +116,7 @@ export async function POST(req) {
         if (rpcError) console.error("⚠️ Error restant inventari:", rpcError);
       }
 
+      // Si ha fallat per inventari buit, crea una alerta per avisar el cuidador
       if (finalStatus === "failed_inventory") {
         const { data: newLog } = await supabaseAdmin
           .from("dispense_logs")
@@ -127,6 +136,7 @@ export async function POST(req) {
         });
       }
 
+      // Si era una ordre manual del dashboard, actualitza el seu estat a completed/failed
       if (command_id) {
         const { error: cmdError } = await supabaseAdmin
           .from("manual_commands")
@@ -150,9 +160,8 @@ export async function POST(req) {
       });
     }
 
-    // ══════════════════════════════════════════
-    // ACCIÓ: SPEAK  ← ara està FORA del dispense
-    // ══════════════════════════════════════════
+    // ─── ACCIÓ: SPEAK ────────────────────────────────────────────
+    // El robot confirma si ha reproduït correctament un missatge de veu del cuidador
     if (action === "speak") {
       const { command_id, status: robotStatus, error_message } = payload;
 
@@ -160,6 +169,7 @@ export async function POST(req) {
         return Response.json({ error: "Falta command_id" }, { status: 400 });
       }
 
+      // Actualitza l'estat de la comanda de veu a "completed" o "failed"
       const { error: cmdError } = await supabaseAdmin
         .from("manual_commands")
         .update({
@@ -179,9 +189,6 @@ export async function POST(req) {
       return Response.json({ success: true });
     }
 
-    // ══════════════════════════════════════════
-    // ACCIÓ DESCONEGUDA
-    // ══════════════════════════════════════════
     return Response.json({ error: "Acció desconeguda" }, { status: 400 });
 
   } catch (error) {

@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import InventorySection from "@/components/medications/InventorySection";
 import SchedulesSection from "@/components/medications/SchedulesSection";
 
-// Constants que es mantenen al fitxer perquè es fan servir aquí
+// Constants que es mantenen al fitxer
 const COLORS = [
   { dot: "bg-sky-400",    gradBtn: "from-sky-500 to-sky-600",    badgeL: "bg-sky-50 text-sky-700 border-sky-200",    badgeD: "bg-sky-900/30 text-sky-300 border-sky-800",    dayActive: "bg-sky-500",    ring: "border-sky-500" },
   { dot: "bg-violet-400",  gradBtn: "from-violet-500 to-violet-600", badgeL: "bg-violet-50 text-violet-700 border-violet-200", badgeD: "bg-violet-900/30 text-violet-300 border-violet-800", dayActive: "bg-violet-500", ring: "border-violet-500" },
@@ -37,7 +37,7 @@ export default function MedicationsPage() {
   const [showSchedForm, setShowSchedForm] = useState(false);
   const [schedForm, setSchedForm] = useState(EMPTY_SCHED);
 
-  // --- Lògica de dades ---
+  // Lògica de dades
   const fetchAll = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -113,7 +113,7 @@ export default function MedicationsPage() {
     await fetchAll();
   };
 
-  // --- Render ---
+  // Render
   const base = dark ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-900";
   const card = dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100 shadow-sm";
   const inp = dark ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-200";

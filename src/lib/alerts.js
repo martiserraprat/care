@@ -1,3 +1,9 @@
+// lib/alerts.js
+// Utilitats per gestionar les alertes del sistema Care-E.
+// Defineix els colors, etiquetes i descripcions de cada tipus d'alerta,
+// i funcions per formatar el text i la data de les alertes al dashboard.
+
+// Color del punt indicador segons el tipus d'alerta (Tailwind CSS)
 export const ALERT_DOT = {
   fall: "bg-red-500",
   medication_missed: "bg-amber-400",
@@ -8,6 +14,7 @@ export const ALERT_DOT = {
   voice_message: "bg-purple-500",
 };
 
+// Color base de la targeta d'alerta (used per generar classes dinàmiques)
 export const ALERT_COLOR = {
   fall: "red",
   medication_missed: "amber",
@@ -18,6 +25,7 @@ export const ALERT_COLOR = {
   voice_message: "sky",
 };
 
+// Etiqueta llegible amb emoji per mostrar al dashboard
 export const ALERT_LABEL = {
   fall: "🚨 Caiguda",
   medication_missed: "⚠️ Presa perduda",
@@ -28,6 +36,7 @@ export const ALERT_LABEL = {
   voice_message: "💬 Missatge",
 };
 
+// Descripció genèrica per alertes sense informació addicional
 const DEFAULT_DESCRIPTIONS = {
   fall: "S'ha detectat una possible caiguda",
   low_battery: "La bateria del robot està baixa",
@@ -37,6 +46,8 @@ const DEFAULT_DESCRIPTIONS = {
 };
 
 export function buildAlertDescription(a) {
+  // Construeix la descripció detallada d'una alerta a partir del seu tipus i log associat.
+  // Per alertes de medicació, inclou el nom del medicament, hora i dosi real vs. demanada.
   const log = a.dispense_log;
 
   if (a.type === "medication_missed" && log) {
@@ -53,10 +64,13 @@ export function buildAlertDescription(a) {
     return `${med}${hora ? ` (${hora}h)` : ""}: només s'han pogut dispensar ${real} de ${demanat} pastilles. Cal omplir el slot.`;
   }
 
+  // Per la resta de tipus, usa la descripció de la BD o el text per defecte
   return a.description || DEFAULT_DESCRIPTIONS[a.type] || "Alerta del sistema";
 }
 
 export function formatAlertTime(dateStr) {
+  // Formata la data d'una alerta de manera llegible:
+  // "Avui HH:MM", "Ahir HH:MM" o "DD MMM HH:MM"
   const date = new Date(dateStr);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();

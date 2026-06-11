@@ -13,8 +13,6 @@ import DispenseCard from "@/components/dashboard/DispenseCard";
 import MedicationTable from "@/components/dashboard/MedicationTable";
 import ActivityTimeline from "@/components/dashboard/ActivityTimeline";
 import NextMedPanel from "@/components/dashboard/NextMedPanel";
-
-// Nuevos componentes extraídos:
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import OfflineDialog from "@/components/dashboard/OfflineDialog";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
@@ -62,7 +60,7 @@ export default function DashboardPage() {
     const { data: slotsData } = await supabase.from("slot_inventory").select("*").eq("robot_id", robotData.id).order("slot");
     setLoadedSlots(slotsData || []);
 
-    // 1. Schedules ACTIUS programats per avui
+    // Schedules ACTIUS programats per avui
     const { data: medsData, error: medsError } = await supabase
       .from("dispense_schedules")
       .select("*, slot_inventory(medication_name)")
@@ -73,7 +71,7 @@ export default function DashboardPage() {
 
     if (medsError) console.error("Error meds:", medsError);
 
-    // 2. ⭐ Logs d'avui filtrats per scheduled_date (hora de Madrid)
+    // Logs d'avui filtrats per scheduled_date (hora de Madrid)
     const todayMadrid = new Date().toLocaleDateString("sv-SE", { 
       timeZone: "Europe/Madrid" 
     });
@@ -84,11 +82,11 @@ export default function DashboardPage() {
       .eq("robot_id", robotData.id)
       .eq("scheduled_date", todayMadrid);
 
-    // 3. Combinem: cada presa només surt UN COP
+    // Combinem: cada presa només surt UN COP
     const combined = [];
     const usedScheduleIds = new Set();
 
-    // 3a. Primer els LOGS (sobreviuen encara que s'esborri el schedule)
+    // Primer els LOGS (sobreviuen encara que s'esborri el schedule)
     for (const log of todayLogs ?? []) {
       combined.push({
         id: `log-${log.id}`,
@@ -107,7 +105,7 @@ export default function DashboardPage() {
       if (log.schedule_id) usedScheduleIds.add(log.schedule_id);
     }
 
-    // 3b. Schedules d'avui que ENCARA NO tenen log
+    // Schedules d'avui que ENCARA NO tenen log
     for (const m of medsData ?? []) {
       if (!usedScheduleIds.has(m.id)) {
         combined.push({
@@ -118,14 +116,14 @@ export default function DashboardPage() {
       }
     }
 
-    // 4. Ordenem per hora
+    // Ordenem per hora
     combined.sort((a, b) => 
       (a.scheduled_time || "").localeCompare(b.scheduled_time || "")
     );
 
     setMeds(combined);
 
-    // 5. Alertes recents per al timeline (amb join al log)
+    // Alertes recents per al timeline (amb join al log)
     const { data: alertsRecent } = await supabase
       .from("alerts")
       .select(`
@@ -143,7 +141,7 @@ export default function DashboardPage() {
       .limit(8);
     setLogs(alertsRecent ?? []);
 
-    // 6. Totes les alertes per a StatsRow
+    // Totes les alertes per a StatsRow
     const { data: alertsData } = await supabase
       .from("alerts")
       .select("*")

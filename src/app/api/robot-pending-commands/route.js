@@ -1,6 +1,9 @@
-// src/app/api/robot-pending-commands/route.js
+// /api/robot-pending-commands
+// El robot consulta si té comandes pendents cada 5 segons (polling).
+// Retorna fins a 5 comandes ordenades per antiguitat i les marca com "in_progress".
 import { createClient } from "@supabase/supabase-js";
 
+// Client admin per llegir i actualitzar comandes sense restriccions de RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -9,7 +12,7 @@ const supabaseAdmin = createClient(
 export async function POST(req) {
   const { robot_id, robot_token } = await req.json();
 
-  // Validar token
+  // Valida el token del robot
   const { data: robot } = await supabaseAdmin
     .from("robots")
     .select("id")
@@ -19,7 +22,8 @@ export async function POST(req) {
 
   if (!robot) return Response.json({ error: "Token invàlid" }, { status: 401 });
 
-  // Buscar ordres pendents amb info del slot
+  // Obté les comandes pendents amb info del slot (medicament, compartiment, quantitat)
+  // Inclou audio_base64 per comandes de tipus "speak" (missatges de veu del cuidador)
   const { data: commands } = await supabaseAdmin
     .from("manual_commands")
     .select(`
@@ -40,7 +44,7 @@ export async function POST(req) {
     .order("created_at", { ascending: true })
     .limit(5);
 
-  // Les marquem com "in_progress" perquè no es reenviin
+  // Marca les comandes com "in_progress" perquè no es tornin a enviar al proper polling
   if (commands && commands.length > 0) {
     const ids = commands.map(c => c.id);
     await supabaseAdmin

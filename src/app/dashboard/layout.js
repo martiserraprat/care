@@ -4,22 +4,22 @@
 import { useState, useEffect, createContext } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 
-export const ThemeContext   = createContext({ theme: "light", setTheme: () => {} });
-export const SidebarContext = createContext({ open: false,    setOpen:  () => {} });
+export const ThemeContext = createContext({ theme: "light", setTheme: () => {} });
+export const SidebarContext = createContext({ open: false, setOpen: () => {} });
 
 export default function DashboardLayout({ children }) {
-  const [theme, setTheme]   = useState("light");
+  const [theme, setTheme] = useState("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [ready, setReady]     = useState(false);  // ← afegeix això
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("care-theme");
     if (saved) setTheme(saved);
-    setReady(true);  // ← marca que ja hem llegit
+    setReady(true);
   }, []);
 
   useEffect(() => {
-    if (!ready) return;  // ← no guardis fins que haguem llegit
+    if (!ready) return;
     localStorage.setItem("care-theme", theme);
   }, [theme, ready]);
 

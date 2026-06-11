@@ -1,8 +1,13 @@
+// /api/check-medication
+// Valida la seguretat farmacològica d'una nova pauta de medicació
+// abans d'introduir-la al pastiller Care-E mitjançant Gemini 2.5 Flash (Vertex AI)
+
 import { GoogleGenAI } from "@google/genai";
 import path from "path";
 import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
+// Client admin de Supabase amb service_role_key — bypassa el RLS per consultar inventari
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -10,6 +15,9 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
+    // 1. CREDENCIALS GOOGLE
+    // A Vercel no hi ha sistema de fitxers persistent. Solució: llegir les credencials
+    // de la variable d'entorn i escriure-les temporalment a /tmp durant l'execució.
     const credsJson = process.env.GOOGLE_CREDENTIALS_JSON;
 
     if (!credsJson) {
@@ -19,13 +27,19 @@ export async function POST(req) {
 
     const os = require('os');
     const credsPath = path.join(os.tmpdir(), "google-credentials-tmp.json");
+    
+    // Escriu les creds al fitxer temporal i apunta GOOGLE_APPLICATION_CREDENTIALS cap a ell
     fs.writeFileSync(credsPath, credsJson);
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
-
+    
+    //2. LLEGIR PETICIÓ
+    // newSchedule: nova pauta a validar | existingSchedules: pautes actives del pacient
     const { newSchedule, existingSchedules } = await req.json();
 
     console.log("=== INICIANDO PETICIÓN A VERTEX AI ===");
-
+  
+    //3. CLIENT VERTEX AI
+    // Inicialitza el client apuntant al projecte de Google Cloud i la regió us-central1
     const ai = new GoogleGenAI({
       vertexai: {
         project: "smrlp-496809",
@@ -33,6 +47,9 @@ export async function POST(req) {
       }
     });
 
+  // 4. PROMPT
+  // Instrueix Gemini com a farmacèutic clínic. Inclou: rol, context pacient,
+  // nova prescripció, restriccions del robot, medicació actual i protocol de 7 passos.
   const prompt = `<role>
   Ets un farmacèutic clínic sènior especialitzat en geriatria i polifarmàcia, amb 20 anys d'experiència revisant pautes de medicació en pacients fràgils. La teva especialitat és detectar errors de prescripció abans que arribin al pacient. Tens accés mental als criteris STOPP/START, Beers Criteria 2023, i bases de dades d'interaccions tipus Lexicomp/Stockley.
 
@@ -209,6 +226,8 @@ Si detectes que la forma farmacèutica del nom del medicament NO és compatible 
 
   console.log("Enviando al modelo gemini-2.5-flash...");
 
+  // 5. CRIDA A GEMINI
+  // responseSchema força el JSON vàlid. thinkingBudget dóna marge de raonament intern.
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: prompt,
@@ -225,7 +244,7 @@ Si detectes que la forma farmacèutica del nom del medicament NO és compatible 
         },
         required: ["safe", "severity", "recommended_action", "warnings", "info"]
       },
-      // ⭐ Habilita el "thinking" pel pas mental
+      // Habilita el "thinking" pel pas mental
       thinkingConfig: {
         thinkingBudget: 1024  // dóna a Gemini espai per raonar abans de respondre
       }
@@ -235,7 +254,9 @@ Si detectes que la forma farmacèutica del nom del medicament NO és compatible 
     const text = response.text;
     console.log("=== RESPUESTA DE VERTEX AI OK ===");
     console.log(text);
-
+    
+    //6. PROCESSAR RESPOSTA
+    // Si Gemini retorna JSON invàlid, fallback a resposta segura per defecte
     let parsed;
     try {
       parsed = JSON.parse(text);
@@ -244,9 +265,7 @@ Si detectes que la forma farmacèutica del nom del medicament NO és compatible 
       parsed = { safe: true, warnings: [], info: "Error al llegir la resposta de la IA." };
     }
 
-    // RESTAURAMOS TAMBIÉN LAS VALIDACIONES MANUALES DEL SERVIDOR POR SEGURIDAD EXTRA
     const doseNum = parseInt(newSchedule.dose);
-    const medName = newSchedule.medication_name?.toLowerCase() || "";
 
     if (doseNum >= 5) {
       parsed.safe = false;
@@ -254,15 +273,8 @@ Si detectes que la forma farmacèutica del nom del medicament NO és compatible 
       parsed.info = `Dosi de ${doseNum} pastilles és excessiva. Revisa la programació.`;
     }
 
-    if ((medName.includes("paracetamol") || medName.includes("acetaminofen")) && doseNum > 2) {
-      parsed.safe = false;
-      if (!parsed.warnings?.some(w => w.toLowerCase().includes("paracetamol"))) {
-        parsed.warnings = [...(parsed.warnings || []), `Paracetamol: dosi màxima per presa és 2 comprimits.`];
-      }
-      parsed.info = `La dosi de Paracetamol és excessiva. Màxim 2 comprimits per presa.`;
-    }
-
-    // ⭐ NOU: VERIFICACIÓ D'INVENTARI
+    // 8. VERIFICACIÓ D'INVENTARI
+    // Comprova que hi ha prou pastilles al slot per la dosi demanada
     if (newSchedule.slot_inventory_id) {
       const { data: slot } = await supabaseAdmin
         .from("slot_inventory")

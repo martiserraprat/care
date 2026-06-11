@@ -1,4 +1,6 @@
-// src/app/api/voice-schedule/route.js
+// /api/voice-schedule
+// El cuidador dicta per veu una programació de pastilles (ex: "Paracetamol cada dia a les 8").
+// Gemini 2.5 Flash extreu medicament, hora, dosi i dies, i omple el formulari automàticament.
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -7,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 
+// Client admin per obtenir l'inventari del pastiller sense restriccions de RLS
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,14 +17,15 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
-    // ─── 1. Credencials Google ───────────────────────────────────────
+    // ─── 1. CREDENCIALS GOOGLE ───────────────────────────────────
+    // Escriu les credencials de la variable d'entorn a /tmp (necessari a Vercel serverless)
     const credsJson = process.env.GOOGLE_CREDENTIALS_JSON;
     if (!credsJson) throw new Error("GOOGLE_CREDENTIALS_JSON no definida.");
     const credsPath = path.join(os.tmpdir(), "google-credentials-tmp.json");
     fs.writeFileSync(credsPath, credsJson);
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
 
-    // ─── 2. Autenticar usuari ────────────────────────────────────────
+    // ─── 2. AUTENTICAR USUARI ────────────────────────────────────
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -31,7 +35,8 @@ export async function POST(req) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Response.json({ error: "No autenticat" }, { status: 401 });
 
-    // ─── 3. Llegir àudio del FormData ────────────────────────────────
+    // ─── 3. LLEGIR ÀUDIO ─────────────────────────────────────────
+    // L'àudio arriba com a FormData en format webm (gravat pel navegador)
     const formData = await req.formData();
     const audioFile = formData.get("audio");
     if (!audioFile) {
@@ -40,7 +45,9 @@ export async function POST(req) {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBase64 = Buffer.from(audioBuffer).toString("base64");
 
-    // ─── 4. Obtenir robot i inventari del pacient ────────────────────
+    // ─── 4. OBTENIR INVENTARI DEL PASTILLER ─────────────────────
+    // Gemini necessita saber quins medicaments hi ha al pastiller
+    // per identificar a quin es refereix el cuidador
     const { data: robot } = await supabaseAdmin
       .from("robots")
       .select("id")
@@ -60,13 +67,17 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // ─── 5. Preparar context per Gemini ──────────────────────────────
+    // ─── 5. PREPARAR CONTEXT PER GEMINI ─────────────────────────
+    // Llista els medicaments disponibles perquè Gemini pugui fer el match
     const inventoryText = inventory
       .map(s => `[id: "${s.id}", slot: ${s.slot}] ${s.medication_name} (${s.pill_count} pastilles)`)
       .join("\n");
 
     const now = new Date().toLocaleString("ca-ES", { timeZone: "Europe/Madrid" });
 
+    // ─── 6. PROMPT ───────────────────────────────────────────────
+    // Instrueix Gemini a extreure: medicament (id del inventari), hora, dosi i dies.
+    // Inclou casos especials (àudio buit, frases ambigues, dies en català).
     const prompt = `<role>
 Ets un assistent que escolta el cuidador d'un pacient i extrau d'un àudio en català/castellà una nova programació de medicació per un pastiller automàtic.
 La data i hora actuals són: ${now}
@@ -151,7 +162,8 @@ Sortida:
 }
 </examples>`;
 
-    // ─── 6. Cridar Gemini ────────────────────────────────────────────
+    // ─── 7. CRIDA A GEMINI (MULTIMODAL) ─────────────────────────
+    // responseSchema força l'estructura JSON de la resposta
     const ai = new GoogleGenAI({
       vertexai: { project: "smrlp-496809", location: "us-central1" },
     });
@@ -187,7 +199,8 @@ Sortida:
 
     const parsed = JSON.parse(response.text);
 
-    // ─── 7. Verificar que l'id retornat existeix realment ────────────
+    // ─── 8. VERIFICAR QUE L'ID EXISTEIX ─────────────────────────
+    // Evita que Gemini retorni un id inventat que no pertany a l'inventari real
     if (parsed.medication_match_id) {
       const exists = inventory.find(s => s.id === parsed.medication_match_id);
       if (!exists) parsed.medication_match_id = null;

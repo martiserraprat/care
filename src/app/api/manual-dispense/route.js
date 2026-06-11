@@ -1,4 +1,7 @@
-// src/app/api/manual-dispense/route.js
+// /api/manual-dispense
+// Permet al cuidador ordenar una dispensació manual en temps real.
+// El robot fa polling cada 5s i recull l'ordre quan estigui "pending".
+
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";

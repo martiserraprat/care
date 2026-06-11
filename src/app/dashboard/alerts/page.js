@@ -60,7 +60,7 @@ export default function AlertsPage() {
     fetchAlerts();
   }, [fetchAlerts]);
 
-  // ⭐ Callback per marcar com a resolta
+  // Callback per marcar com a resolta
   const handleResolve = async (alertId) => {
     // Actualització optimista: marquem la UI primer
     setAlerts(prev => prev.map(a => 
@@ -154,8 +154,8 @@ export default function AlertsPage() {
           filter === "resolved" ? "Alertes resoltes" : 
           "Totes les alertes"
         }
-        showResolveButton={true}                  // ⭐ activem el botó
-        onResolve={handleResolve}                  // ⭐ passem la lògica
+        showResolveButton={true} //activem el botó
+        onResolve={handleResolve} //passem la lògica
         emptyMessage={
           filter === "unresolved" ? "No hi ha alertes sense resoldre 🎉" :
           filter === "resolved" ? "Encara no hi ha alertes resoltes" :

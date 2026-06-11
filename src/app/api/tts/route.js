@@ -1,7 +1,11 @@
-// src/app/api/tts/route.js
+// /api/tts
+// El robot demana convertir un text a veu (Text-to-Speech) en català.
+// S'usa per reproduir les respostes de Gemini al pacient.
+// Autenticació via token del robot (no cookie d'usuari).
 import { createClient } from "@supabase/supabase-js";
 import textToSpeech from "@google-cloud/text-to-speech";
 
+// Client admin per validar el token del robot
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,7 +19,7 @@ export async function POST(req) {
       return Response.json({ error: "Text buit" }, { status: 400 });
     }
 
-    // Validar token del robot
+    // Valida el token del robot abans de generar àudio
     const { data: robot } = await supabaseAdmin
       .from("robots")
       .select("id")
@@ -27,7 +31,8 @@ export async function POST(req) {
       return Response.json({ error: "Token invàlid" }, { status: 401 });
     }
 
-    // Generar TTS
+    // ─── GENERAR VOZ AMB GOOGLE CLOUD TTS ───────────────────────
+    // Veu ca-ES-Standard-A: femenina en català, velocitat 0.95x per gent gran
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     const ttsClient = new textToSpeech.TextToSpeechClient({ credentials });
 
@@ -44,6 +49,7 @@ export async function POST(req) {
       },
     });
 
+    // Retorna l'àudio MP3 codificat en base64 perquè el robot el reprodueixi
     const audioBase64 = Buffer.from(ttsResponse.audioContent).toString("base64");
 
     return Response.json({ 
