@@ -7,6 +7,10 @@ import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { 
+  comprovarRespostaPredefinida, 
+  obtenirPersonalitatPrompt 
+} from "@/lib/voice-assistant";
 
 // Client admin per guardar missatges de veu i alertes sense restriccions de RLS
 const supabaseAdmin = createClient(
@@ -109,7 +113,7 @@ export async function POST(req) {
        - "normal": comentaris o dubtes genèrics sense perill.
        - "low": salutacions o informació rutinària.
     5. RESPOSTA PEL ROBOT ("robot_response"): 
-       - Si la intenció és "robot", respon al pacient de forma empàtica i útil.
+       - Si la intenció és "robot", respon al pacient de forma empàtica i útil, seguint les regles de personalitat.
        - Si la intenció és "caregiver", confirma l'enviament amb una frase com: "Molt bé, acabo d'enviar aquesta pregunta al teu cuidador perquè t'ho revisi."
 
     Respon ÚNICAMENT amb JSON vàlid:
@@ -142,7 +146,7 @@ export async function POST(req) {
       return Response.json({
         success: true,
         intent: "unclear",
-        transcript: parsed.raw_transcript,
+        transcript: parsed.raw_transcript || rawTranscript,
         response_text: "No t'he entès bé, pots repetir-ho?",
       });
     }
@@ -177,13 +181,14 @@ export async function POST(req) {
       });
     }
 
+    // ✅ L'únic canvi clau: sempre usar parsed.robot_response
     return Response.json({
       success: true,
       intent: parsed.intent,
-      transcript: parsed.raw_transcript,
+      transcript: parsed.raw_transcript || rawTranscript,
       response_text:
         parsed.intent === "robot" ? parsed.robot_response :
-        parsed.intent === "caregiver" ? "Ho he enviat al teu cuidador." :
+        parsed.intent === "caregiver" ? parsed.robot_response :  // ← aquí estava el bug
         "No t'he entès bé, pots repetir-ho?",
     });
 
